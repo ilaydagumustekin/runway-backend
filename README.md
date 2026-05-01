@@ -65,6 +65,9 @@ uvicorn app.main:app --reload
 - `POST /auth/login-json`
 - `GET /users/me`
 - `POST /auth/logout`
+- `POST /favorites/{neighborhood_id}`
+- `GET /favorites`
+- `DELETE /favorites/{neighborhood_id}`
 
 ## 7) Test Akışı
 
@@ -155,7 +158,59 @@ Authorization: Bearer your-jwt-token
 }
 ```
 
-## 10) Notlar
+## 10) Favorites Endpointleri
+
+Swagger içinde `Favorites` tag'i altında aşağıdaki endpointler görünür:
+
+### `POST /favorites/{neighborhood_id}`
+
+Bearer token ile giriş yapan kullanıcının ilgili mahalleyi favorilerine ekler.
+
+- Mahalle yoksa `404`
+- Aynı mahalle zaten favorideyse `400`
+
+Örnek:
+
+```text
+POST /favorites/1
+Authorization: Bearer your-jwt-token
+```
+
+### `GET /favorites`
+
+Giriş yapan kullanıcının favori mahallelerini listeler. Favori yoksa boş liste döner.
+Response içinde mahalle bilgileri de bulunur: `id`, `name`, `city`, `district`, `latitude`, `longitude`.
+
+Örnek:
+
+```text
+GET /favorites
+Authorization: Bearer your-jwt-token
+```
+
+### `DELETE /favorites/{neighborhood_id}`
+
+Giriş yapan kullanıcının ilgili mahalleyi favorilerinden kaldırır.
+
+- Favori kayıt yoksa `404`
+
+Başarılı response:
+
+```json
+{
+  "message": "Favorite neighborhood removed successfully."
+}
+```
+
+## 11) Örnek Akış
+
+1. `POST /auth/register` ile kullanıcı oluştur.
+2. `POST /auth/login` veya `POST /auth/login-json` ile token al.
+3. `POST /favorites/{neighborhood_id}` ile mahalleyi favorilere ekle.
+4. `GET /favorites` ile favori listesini görüntüle.
+5. `DELETE /favorites/{neighborhood_id}` ile favoriden kaldır.
+
+## 12) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
