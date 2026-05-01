@@ -76,6 +76,7 @@ uvicorn app.main:app --reload
 - `GET /feedback/my`
 - `GET /admin/feedback`
 - `PATCH /admin/feedback/{feedback_id}/status`
+- `POST /admin/users/create-admin`
 
 ## 7) Test Akışı
 
@@ -319,6 +320,45 @@ Sadece `role="admin"` olan kullanıcılar erişebilir. Belirli bir geri bildirim
 5. Admin kullanıcı ile `GET /admin/feedback` üzerinden tüm kayıtları görüntüle.
 6. Admin kullanıcı ile `PATCH /admin/feedback/{feedback_id}/status` üzerinden durumu güncelle.
 
+## 16) Admin Users Endpointi
+
+Swagger içinde `Admin Users` tag'i altında aşağıdaki endpoint görünür:
+
+### `POST /admin/users/create-admin`
+
+MVP/test amaçlı admin kullanıcı oluşturur. Yeni kullanıcıyı doğrudan `role="admin"` ile kaydeder.
+
+Örnek request body:
+
+```json
+{
+  "full_name": "Platform Admin",
+  "email": "admin@example.com",
+  "password": "strongpass123"
+}
+```
+
+Önemli güvenlik notu:
+
+- Bu endpoint production ortamında açık bırakılmamalıdır.
+- Uygulamada endpoint Swagger'da görünür kalır, ancak varsayılan tasarım gereği sadece `SEED_DEMO_DATA=true` iken çalışır.
+- `SEED_DEMO_DATA=false` olduğunda endpoint `403` döner.
+
+## 17) Admin Test Akışı
+
+1. `POST /admin/users/create-admin` ile admin kullanıcı oluştur.
+2. `POST /auth/login` veya `POST /auth/login-json` ile admin olarak token al.
+3. Normal kullanıcı ile `POST /feedback` üzerinden geri bildirim oluştur.
+4. Admin token ile `GET /admin/feedback` çağır.
+5. Admin token ile `PATCH /admin/feedback/{feedback_id}/status` çağır.
+
+## 18) Notlar
+
+- `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
+- Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
+- PostgreSQL desteği korunmuştur. İleride `.env` içinde `DATABASE_URL` PostgreSQL URL ile değiştirilebilir.
+- JWT ayarları `.env` üzerinden yönetilir: `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `ALGORITHM`.
+- Swagger Authorize penceresinde `username` alanına email girerek `/auth/login` üzerinden token alınır.
 ## 16) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
