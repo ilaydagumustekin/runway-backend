@@ -15,3 +15,4 @@ class Neighborhood(Base):
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     boundary_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     favorite_entries = relationship("FavoriteNeighborhood", back_populates="neighborhood")
+    notifications = relationship("Notification", back_populates="neighborhood")

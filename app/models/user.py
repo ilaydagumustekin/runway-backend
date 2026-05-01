@@ -18,3 +18,4 @@ class User(Base):
     favorite_neighborhoods = relationship("FavoriteNeighborhood", back_populates="user")
     route_history_entries = relationship("RouteHistory", back_populates="user")
     feedback_entries = relationship("Feedback", back_populates="user")
+    notifications = relationship("Notification", back_populates="user")

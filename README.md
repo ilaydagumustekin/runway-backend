@@ -86,6 +86,11 @@ uvicorn app.main:app --reload
 - `PATCH /admin/environmental-data/{environmental_data_id}/green-area`
 - `GET /admin/routes`
 - `PATCH /admin/route-history/{route_history_id}`
+- `GET /notifications`
+- `PATCH /notifications/{notification_id}/read`
+- `POST /admin/notifications`
+- `GET /admin/notifications`
+- `DELETE /admin/notifications/{notification_id}`
 
 ## 7) Test Akışı
 
@@ -473,7 +478,81 @@ Rota geçmişi kaydını kısmi olarak günceller.
 7. `GET /admin/routes` ile tüm rota geçmişlerini görüntüle.
 8. `PATCH /admin/route-history/{route_history_id}` ile rota geçmişini güncelle.
 
-## 20) Notlar
+## 20) Notification Endpointleri
+
+Swagger içinde `Notifications` ve `Admin Notifications` tag'leri altında aşağıdaki endpointler görünür:
+
+### `GET /notifications`
+
+Giriş yapan kullanıcıya ait bildirimleri ve `user_id=null` olan genel bildirimleri en yeniden en eskiye doğru listeler.
+
+### `PATCH /notifications/{notification_id}/read`
+
+Kullanıcının kendi bildirimi veya genel bildirimi için `is_read` alanını günceller.
+
+Örnek request body:
+
+```json
+{
+  "is_read": true
+}
+```
+
+### `POST /admin/notifications`
+
+Sadece admin kullanıcılar erişebilir. Yeni bildirim oluşturur.
+
+Örnek request body:
+
+```json
+{
+  "user_id": null,
+  "neighborhood_id": 1,
+  "title": "Hava Kalitesi Uyarisi",
+  "message": "Secili mahallede hava kalitesi sagliksiz seviyeye yaklasti.",
+  "notification_type": "air_quality",
+  "severity": "high"
+}
+```
+
+### `GET /admin/notifications`
+
+Tüm bildirimleri en yeniden en eskiye listeler.
+
+### `DELETE /admin/notifications/{notification_id}`
+
+Belirli bir bildirimi siler.
+
+Başarılı response:
+
+```json
+{
+  "message": "Notification deleted successfully."
+}
+```
+
+## 21) Otomatik Hava Kalitesi Uyarisi Helper'i
+
+`app/services/notification_service.py` içinde `create_air_quality_alert_if_needed(db, user_id, neighborhood_id, aqi)` helper'i eklidir.
+
+- `aqi < 100` ise bildirim oluşturmaz
+- `aqi >= 100` ise `severity="medium"`
+- `aqi >= 150` ise `severity="high"`
+- `aqi >= 200` ise `severity="critical"`
+
+Bu helper ileride environmental data ekleme veya analiz akışlarına bağlanabilecek şekilde hazırdır.
+
+## 22) Notification Test Akışı
+
+1. `POST /admin/users/create-admin` ile admin kullanıcı oluştur.
+2. Normal kullanıcı oluşturup giriş yap.
+3. Admin ile `POST /admin/notifications` çağırarak kullanıcıya özel veya genel bildirim oluştur.
+4. Normal kullanıcı ile `GET /notifications` çağırarak bildirimleri görüntüle.
+5. `PATCH /notifications/{notification_id}/read` ile bildirimi okundu işaretle.
+6. Admin ile `GET /admin/notifications` üzerinden tüm bildirimleri görüntüle.
+7. Gerekirse `DELETE /admin/notifications/{notification_id}` ile bildirimi sil.
+
+## 23) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
