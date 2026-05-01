@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./runway.db"
     cors_origins: str = "*"
     seed_demo_data: bool = True
+    secret_key: str = "change-me"
+    access_token_expire_minutes: int = 60
+    algorithm: str = "HS256"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
