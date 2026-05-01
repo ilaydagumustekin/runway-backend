@@ -91,6 +91,11 @@ uvicorn app.main:app --reload
 - `POST /admin/notifications`
 - `GET /admin/notifications`
 - `DELETE /admin/notifications/{notification_id}`
+- `GET /statistics/neighborhood/{neighborhood_id}/summary`
+- `GET /statistics/neighborhood/{neighborhood_id}/history`
+- `GET /statistics/neighborhood/{neighborhood_id}/chart-data`
+- `GET /data-sources`
+- `GET /data-sources/{source_name}`
 
 ## 7) Test Akışı
 
@@ -552,7 +557,73 @@ Bu helper ileride environmental data ekleme veya analiz akışlarına bağlanabi
 6. Admin ile `GET /admin/notifications` üzerinden tüm bildirimleri görüntüle.
 7. Gerekirse `DELETE /admin/notifications/{notification_id}` ile bildirimi sil.
 
-## 23) Notlar
+## 23) Statistics Endpointleri
+
+Swagger içinde `Statistics` tag'i altında aşağıdaki endpointler görünür:
+
+### `GET /statistics/neighborhood/{neighborhood_id}/summary`
+
+Verilen mahalle icin son environmental data kaydina gore ozet istatistik dondurur.
+
+### `GET /statistics/neighborhood/{neighborhood_id}/history`
+
+Mahallenin environmental data gecmisini en eskiden en yeniye listeler.
+
+Query parametresi:
+
+```text
+limit=20
+```
+
+### `GET /statistics/neighborhood/{neighborhood_id}/chart-data`
+
+Mobil grafik ekrani icin hazir seri verisi dondurur.
+
+Ornek response:
+
+```json
+{
+  "neighborhood_id": 1,
+  "labels": ["2026-05-01", "2026-05-02"],
+  "aqi": [55, 60],
+  "noise_level_dba": [58, 61],
+  "green_area_ratio": [32.5, 35.0],
+  "myki_score": [66.0, 68.2]
+}
+```
+
+## 24) Data Sources Endpointleri
+
+Swagger icinde `Data Sources` tag'i altinda asagidaki endpointler gorunur:
+
+### `GET /data-sources`
+
+Projede kullanilan veri kaynaklarini listeler.
+
+### `GET /data-sources/{source_name}`
+
+Belirli veri kaynaginin detayini dondurur.
+
+Desteklenen `source_name` ornekleri:
+
+- `openaq`
+- `waqi`
+- `airnow`
+- `mobile-sensor`
+- `google-maps-satellite`
+- `vlm`
+- `tuik-cip`
+- `user-contributed`
+
+## 25) Statistics ve Data Sources Test Akisi
+
+1. `GET /statistics/neighborhood/{neighborhood_id}/summary` ile ozet kart verisini al.
+2. `GET /statistics/neighborhood/{neighborhood_id}/history?limit=20` ile zaman serisini al.
+3. `GET /statistics/neighborhood/{neighborhood_id}/chart-data` ile mobil grafik verisini al.
+4. `GET /data-sources` ile veri kaynaklarini listele.
+5. `GET /data-sources/openaq` gibi bir endpoint ile tek kaynak detayini al.
+
+## 26) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
