@@ -1,0 +1,41 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models.user import User
+from app.schemas.user import TokenResponse, UserCreate, UserLogin, UserResponse
+from app.services.auth_service import authenticate_user, create_access_token, get_user_by_email, hash_password
+
+router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register_user(payload: UserCreate, db: Session = Depends(get_db)) -> User:
+    existing_user = get_user_by_email(db, payload.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email is already registered.")
+
+    user = User(
+        full_name=payload.full_name.strip(),
+        email=payload.email.strip().lower(),
+        hashed_password=hash_password(payload.password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/login", response_model=TokenResponse)
+def login_user(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
+    user = authenticate_user(db, payload.email, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect email or password.")
+
+    access_token = create_access_token(subject=user.email)
+    return TokenResponse(access_token=access_token)
+
+
+@router.post("/logout")
+def logout_user() -> dict[str, str]:
+    return {"message": "Logout successful. Please remove token on client side."}

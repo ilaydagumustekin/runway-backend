@@ -60,6 +60,10 @@ uvicorn app.main:app --reload
 - `GET /myki/{neighborhood_id}`
 - `POST /noise-measurements`
 - `POST /routes/recommend`
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /users/me`
+- `POST /auth/logout`
 
 ## 7) Test Akışı
 
@@ -77,8 +81,69 @@ uvicorn app.main:app --reload
 - Green area analysis
 - TÜİK validation
 
-## 9) Notlar
+## 9) Auth Endpointleri
+
+Swagger içinde `Auth` ve `Users` tagleri altında aşağıdaki endpointler görünür:
+
+### `POST /auth/register`
+
+Yeni kullanıcı oluşturur. `email` daha önce kayıtlıysa `400` döner.
+
+Örnek request body:
+
+```json
+{
+  "full_name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "strongpass123"
+}
+```
+
+### `POST /auth/login`
+
+Email ve şifre doğruysa JWT access token döner. Bilgiler hatalıysa `401` döner.
+
+Örnek request body:
+
+```json
+{
+  "email": "ada@example.com",
+  "password": "strongpass123"
+}
+```
+
+Örnek response:
+
+```json
+{
+  "access_token": "your-jwt-token",
+  "token_type": "bearer"
+}
+```
+
+### `GET /users/me`
+
+`Authorization: Bearer <token>` header'ı ile giriş yapan kullanıcının bilgisini döner.
+
+Örnek header:
+
+```text
+Authorization: Bearer your-jwt-token
+```
+
+### `POST /auth/logout`
+
+Şimdilik placeholder response döner:
+
+```json
+{
+  "message": "Logout successful. Please remove token on client side."
+}
+```
+
+## 10) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
 - PostgreSQL desteği korunmuştur. İleride `.env` içinde `DATABASE_URL` PostgreSQL URL ile değiştirilebilir.
+- JWT ayarları `.env` üzerinden yönetilir: `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `ALGORITHM`.
