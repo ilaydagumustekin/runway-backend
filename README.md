@@ -68,6 +68,10 @@ uvicorn app.main:app --reload
 - `POST /favorites/{neighborhood_id}`
 - `GET /favorites`
 - `DELETE /favorites/{neighborhood_id}`
+- `POST /route-history`
+- `GET /route-history`
+- `GET /route-history/{route_history_id}`
+- `DELETE /route-history/{route_history_id}`
 
 ## 7) Test Akışı
 
@@ -210,7 +214,59 @@ Başarılı response:
 4. `GET /favorites` ile favori listesini görüntüle.
 5. `DELETE /favorites/{neighborhood_id}` ile favoriden kaldır.
 
-## 12) Notlar
+## 12) Route History Endpointleri
+
+Swagger içinde `Route History` tag'i altında aşağıdaki endpointler görünür:
+
+### `POST /route-history`
+
+Bearer token ile giriş yapan kullanıcı için rota geçmişi kaydı oluşturur.
+
+Örnek request body:
+
+```json
+{
+  "route_name": "Daha Temiz ve Sessiz Yaya Rotasi (Mock)",
+  "start_latitude": 37.7800,
+  "start_longitude": 30.5600,
+  "destination_latitude": 37.7700,
+  "destination_longitude": 30.5500,
+  "estimated_duration_minutes": 18,
+  "environmental_score": 84.5
+}
+```
+
+### `GET /route-history`
+
+Giriş yapan kullanıcının rota geçmişini en yeniden en eskiye doğru listeler. Kayıt yoksa boş liste döner.
+
+### `GET /route-history/{route_history_id}`
+
+Sadece giriş yapan kullanıcının kendi rota geçmişi kaydını döner. Kayıt yoksa veya başka kullanıcıya aitse `404` döner.
+
+### `DELETE /route-history/{route_history_id}`
+
+Sadece giriş yapan kullanıcının kendi rota geçmişi kaydını siler.
+
+Başarılı response:
+
+```json
+{
+  "message": "Route history deleted successfully."
+}
+```
+
+## 13) Örnek Route History Akışı
+
+1. `POST /auth/register` ile kullanıcı oluştur.
+2. `POST /auth/login` veya `POST /auth/login-json` ile token al.
+3. `POST /routes/recommend` ile rota önerisi al.
+4. `POST /route-history` ile önerilen rotayı geçmişe kaydet.
+5. `GET /route-history` ile geçmiş rotaları listele.
+6. `GET /route-history/{route_history_id}` ile tek kaydı görüntüle.
+7. `DELETE /route-history/{route_history_id}` ile kaydı sil.
+
+## 14) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
