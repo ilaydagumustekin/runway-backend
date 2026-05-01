@@ -62,6 +62,7 @@ uvicorn app.main:app --reload
 - `POST /routes/recommend`
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /auth/login-json`
 - `GET /users/me`
 - `POST /auth/logout`
 
@@ -101,15 +102,15 @@ Yeni kullanıcı oluşturur. `email` daha önce kayıtlıysa `400` döner.
 
 ### `POST /auth/login`
 
-Email ve şifre doğruysa JWT access token döner. Bilgiler hatalıysa `401` döner.
+Swagger Authorize ile uyumlu giriş endpointidir. `application/x-www-form-urlencoded` formatında
+`username` (email olarak yorumlanır) ve `password` bekler.
+Bilgiler doğruysa JWT access token döner, hatalıysa `401` döner.
 
-Örnek request body:
+Örnek form alanları:
 
-```json
-{
-  "email": "ada@example.com",
-  "password": "strongpass123"
-}
+```text
+username=ada@example.com
+password=strongpass123
 ```
 
 Örnek response:
@@ -118,6 +119,19 @@ Email ve şifre doğruysa JWT access token döner. Bilgiler hatalıysa `401` dö
 {
   "access_token": "your-jwt-token",
   "token_type": "bearer"
+}
+```
+
+### `POST /auth/login-json`
+
+JSON body ile giriş için alternatif endpointtir.
+
+Örnek request body:
+
+```json
+{
+  "email": "ada@example.com",
+  "password": "strongpass123"
 }
 ```
 
@@ -147,3 +161,4 @@ Authorization: Bearer your-jwt-token
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
 - PostgreSQL desteği korunmuştur. İleride `.env` içinde `DATABASE_URL` PostgreSQL URL ile değiştirilebilir.
 - JWT ayarları `.env` üzerinden yönetilir: `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `ALGORITHM`.
+- Swagger Authorize penceresinde `username` alanına email girerek `/auth/login` üzerinden token alınır.
