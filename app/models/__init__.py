@@ -1,5 +1,6 @@
 from app.models.environmental_data import EnvironmentalData
 from app.models.favorite_neighborhood import FavoriteNeighborhood
+from app.models.feedback import Feedback
 from app.models.neighborhood import Neighborhood
 from app.models.noise_measurement import NoiseMeasurement
 from app.models.route_history import RouteHistory
@@ -12,4 +13,5 @@ __all__ = [
     "User",
     "FavoriteNeighborhood",
     "RouteHistory",
+    "Feedback",
 ]

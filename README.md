@@ -72,6 +72,10 @@ uvicorn app.main:app --reload
 - `GET /route-history`
 - `GET /route-history/{route_history_id}`
 - `DELETE /route-history/{route_history_id}`
+- `POST /feedback`
+- `GET /feedback/my`
+- `GET /admin/feedback`
+- `PATCH /admin/feedback/{feedback_id}/status`
 
 ## 7) Test Akışı
 
@@ -266,7 +270,56 @@ Başarılı response:
 6. `GET /route-history/{route_history_id}` ile tek kaydı görüntüle.
 7. `DELETE /route-history/{route_history_id}` ile kaydı sil.
 
-## 14) Notlar
+## 14) Feedback Endpointleri
+
+Swagger içinde `Feedback` ve `Admin Feedback` tag'leri altında aşağıdaki endpointler görünür:
+
+### `POST /feedback`
+
+Bearer token ile giriş yapan kullanıcı geri bildirim gönderir. `status` otomatik olarak `new` atanır.
+
+Örnek request body:
+
+```json
+{
+  "subject": "Rota sonucu beklediğimden yavaştı",
+  "message": "Bazı sokaklarda süre tahmini gerçeğe göre uzun kaldı.",
+  "rating": 4,
+  "category": "suggestion"
+}
+```
+
+### `GET /feedback/my`
+
+Giriş yapan kullanıcının kendi geri bildirimlerini en yeniden en eskiye doğru listeler. Kayıt yoksa boş liste döner.
+
+### `GET /admin/feedback`
+
+Sadece `role="admin"` olan kullanıcılar erişebilir. Tüm kullanıcıların geri bildirimlerini en yeniden en eskiye doğru listeler.
+Admin olmayan kullanıcı erişirse `403` döner.
+
+### `PATCH /admin/feedback/{feedback_id}/status`
+
+Sadece `role="admin"` olan kullanıcılar erişebilir. Belirli bir geri bildirimin durumunu günceller.
+
+Örnek request body:
+
+```json
+{
+  "status": "reviewed"
+}
+```
+
+## 15) Örnek Feedback Akışı
+
+1. `POST /auth/register` ile kullanıcı oluştur.
+2. `POST /auth/login` veya `POST /auth/login-json` ile token al.
+3. `POST /feedback` ile geri bildirim gönder.
+4. `GET /feedback/my` ile kendi geri bildirimlerini listele.
+5. Admin kullanıcı ile `GET /admin/feedback` üzerinden tüm kayıtları görüntüle.
+6. Admin kullanıcı ile `PATCH /admin/feedback/{feedback_id}/status` üzerinden durumu güncelle.
+
+## 16) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.

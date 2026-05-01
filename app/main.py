@@ -5,7 +5,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import app.models
 from app.core.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routes import auth, environmental_data, favorites, myki, neighborhoods, noise_measurements, placeholders, route_history, routes, users
+from app.routes import auth, environmental_data, feedback, favorites, myki, neighborhoods, noise_measurements, placeholders, route_history, routes, users
 from app.services.seed_service import seed_neighborhoods_if_enabled
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -55,3 +55,5 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(favorites.router)
 app.include_router(route_history.router)
+app.include_router(feedback.feedback_router)
+app.include_router(feedback.admin_feedback_router)

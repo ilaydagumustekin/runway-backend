@@ -17,3 +17,4 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     favorite_neighborhoods = relationship("FavoriteNeighborhood", back_populates="user")
     route_history_entries = relationship("RouteHistory", back_populates="user")
+    feedback_entries = relationship("Feedback", back_populates="user")
