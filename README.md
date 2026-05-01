@@ -77,6 +77,15 @@ uvicorn app.main:app --reload
 - `GET /admin/feedback`
 - `PATCH /admin/feedback/{feedback_id}/status`
 - `POST /admin/users/create-admin`
+- `GET /admin/neighborhoods`
+- `PATCH /admin/neighborhoods/{neighborhood_id}`
+- `GET /admin/environmental-data`
+- `PATCH /admin/environmental-data/{environmental_data_id}`
+- `PATCH /admin/environmental-data/{environmental_data_id}/air-quality`
+- `PATCH /admin/environmental-data/{environmental_data_id}/noise`
+- `PATCH /admin/environmental-data/{environmental_data_id}/green-area`
+- `GET /admin/routes`
+- `PATCH /admin/route-history/{route_history_id}`
 
 ## 7) Test Akışı
 
@@ -352,7 +361,119 @@ MVP/test amaçlı admin kullanıcı oluşturur. Yeni kullanıcıyı doğrudan `r
 4. Admin token ile `GET /admin/feedback` çağır.
 5. Admin token ile `PATCH /admin/feedback/{feedback_id}/status` çağır.
 
-## 18) Notlar
+## 18) Admin Data Endpointleri
+
+Swagger içinde `Admin Data` tag'i altında aşağıdaki endpointler görünür. Tüm endpointler Bearer token ister ve sadece `role="admin"` kullanıcılar erişebilir.
+
+### `GET /admin/neighborhoods`
+
+Tüm mahalle kayıtlarını listeler.
+
+### `PATCH /admin/neighborhoods/{neighborhood_id}`
+
+Mahalle bilgisini kısmi olarak günceller.
+
+Örnek request body:
+
+```json
+{
+  "name": "Guncel Mahalle",
+  "city": "Isparta",
+  "district": "Merkez",
+  "latitude": 37.7805,
+  "longitude": 30.5611,
+  "boundary_data": "{\"type\":\"Polygon\"}"
+}
+```
+
+### `GET /admin/environmental-data`
+
+Tüm environmental data kayıtlarını en yeniden en eskiye listeler.
+
+### `PATCH /admin/environmental-data/{environmental_data_id}`
+
+Environmental data kaydını kısmi olarak günceller.
+
+Örnek request body:
+
+```json
+{
+  "pm25": 12.0,
+  "pm10": 22.0,
+  "no2": 18.0,
+  "o3": 31.0,
+  "aqi": 56.0,
+  "green_area_ratio": 47.5,
+  "noise_level_dba": 58.0
+}
+```
+
+### `PATCH /admin/environmental-data/{environmental_data_id}/air-quality`
+
+Sadece hava kalitesi alanlarını günceller.
+
+Örnek request body:
+
+```json
+{
+  "pm25": 10.0,
+  "pm10": 21.0,
+  "no2": 16.0,
+  "o3": 29.0,
+  "aqi": 51.0
+}
+```
+
+### `PATCH /admin/environmental-data/{environmental_data_id}/noise`
+
+Sadece gürültü alanını günceller.
+
+```json
+{
+  "noise_level_dba": 54.0
+}
+```
+
+### `PATCH /admin/environmental-data/{environmental_data_id}/green-area`
+
+Sadece yeşil alan oranını günceller.
+
+```json
+{
+  "green_area_ratio": 52.0
+}
+```
+
+### `GET /admin/routes`
+
+Tüm kullanıcıların rota geçmişi kayıtlarını en yeniden en eskiye listeler.
+
+### `PATCH /admin/route-history/{route_history_id}`
+
+Rota geçmişi kaydını kısmi olarak günceller.
+
+Örnek request body:
+
+```json
+{
+  "route_name": "Guncel Admin Rotasi",
+  "estimated_duration_minutes": 17,
+  "environmental_score": 88.4
+}
+```
+
+## 19) Admin Data Test Akışı
+
+1. `POST /admin/users/create-admin` ile admin kullanıcı oluştur.
+2. Admin olarak giriş yapıp Bearer token al.
+3. `GET /admin/neighborhoods` ile mahalleleri listele.
+4. `PATCH /admin/neighborhoods/{neighborhood_id}` ile mahalle güncelle.
+5. `GET /admin/environmental-data` ile environmental data kayıtlarını listele.
+6. `PATCH /admin/environmental-data/{environmental_data_id}` veya alt endpointlerle veri güncelle.
+7. `GET /admin/routes` ile tüm rota geçmişlerini görüntüle.
+8. `PATCH /admin/route-history/{route_history_id}` ile rota geçmişini güncelle.
+
+## 20) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
