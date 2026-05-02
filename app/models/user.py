@@ -23,3 +23,4 @@ class User(Base):
     route_history_entries = relationship("RouteHistory", back_populates="user")
     feedback_entries = relationship("Feedback", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
+    navigation_sessions = relationship("NavigationSession", back_populates="user")

@@ -101,6 +101,11 @@ uvicorn app.main:app --reload
 - `GET /location/nearby-neighborhoods`
 - `GET /map/neighborhood-markers`
 - `GET /map/neighborhood-markers/with-scores`
+- `POST /navigation/start`
+- `GET /navigation/current`
+- `PATCH /navigation/{navigation_session_id}/complete`
+- `PATCH /navigation/{navigation_session_id}/cancel`
+- `GET /navigation/history`
 
 ## 7) Test Akışı
 
@@ -763,7 +768,61 @@ Environmental data olmayan mahallelerde `myki_score` ve `myki_category` `null` g
 3. `GET /map/neighborhood-markers` ile tum marker verilerini al.
 4. `GET /map/neighborhood-markers/with-scores` ile MYKI ozetli marker verilerini al.
 
-## 30) Notlar
+## 30) Navigation Endpointleri
+
+Swagger icinde `Navigation` tag'i altinda asagidaki endpointler gorunur:
+
+### `POST /navigation/start`
+
+Giris yapan kullanici icin navigasyon oturumu baslatir.
+
+Route history ile baslatma:
+
+```json
+{
+  "route_history_id": 1
+}
+```
+
+Direkt rota bilgileriyle baslatma:
+
+```json
+{
+  "route_name": "Cunur - Davraz Yuruyus Rotasi",
+  "start_latitude": 37.8344,
+  "start_longitude": 30.5267,
+  "destination_latitude": 37.8261,
+  "destination_longitude": 30.5365
+}
+```
+
+Ayni kullanici icin aktif bir session varsa `400` doner.
+
+### `GET /navigation/current`
+
+Giris yapan kullanicinin aktif navigasyon oturumunu doner. Aktif oturum yoksa `404` doner.
+
+### `PATCH /navigation/{navigation_session_id}/complete`
+
+Kullaniciya ait navigasyon oturumunu `completed` yapar ve `ended_at` degerini set eder.
+
+### `PATCH /navigation/{navigation_session_id}/cancel`
+
+Kullaniciya ait navigasyon oturumunu `cancelled` yapar ve `ended_at` degerini set eder.
+
+### `GET /navigation/history`
+
+Kullanicinin tum navigasyon oturumlarini en yeniden en eskiye listeler.
+
+## 31) Navigation Test Akisi
+
+1. `POST /route-history` ile rota gecmisi kaydi olustur.
+2. `POST /navigation/start` ile `route_history_id` uzerinden navigasyon baslat.
+3. `GET /navigation/current` ile aktif session'ı goruntule.
+4. `PATCH /navigation/{navigation_session_id}/complete` veya `cancel` ile session durumunu guncelle.
+5. `GET /navigation/history` ile gecmis navigasyon oturumlarini listele.
+
+## 32) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
