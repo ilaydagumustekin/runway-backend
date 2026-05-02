@@ -97,6 +97,10 @@ uvicorn app.main:app --reload
 - `GET /data-sources`
 - `GET /data-sources/{source_name}`
 - `GET /neighborhoods/{neighborhood_id}/details`
+- `GET /location/nearest-neighborhood`
+- `GET /location/nearby-neighborhoods`
+- `GET /map/neighborhood-markers`
+- `GET /map/neighborhood-markers/with-scores`
 
 ## 7) Test Akışı
 
@@ -690,7 +694,47 @@ Not:
 3. `GET /statistics/neighborhood/{neighborhood_id}/chart-data` ile grafik ozetini karsilastir.
 4. `GET /data-sources` ile veri kaynagi listesiyle ayni kaynaklarin dondugunu kontrol et.
 
-## 28) Notlar
+## 28) Location ve Map Endpointleri
+
+Swagger icinde `Location` tag'i altinda asagidaki endpointler gorunur:
+
+### `GET /location/nearest-neighborhood`
+
+Verilen latitude/longitude koordinatina en yakin mahalleyi bulur.
+
+Ornek:
+
+```text
+GET /location/nearest-neighborhood?latitude=37.78&longitude=30.56
+```
+
+### `GET /location/nearby-neighborhoods`
+
+Belirli yaricap icindeki mahalleleri en yakindan uzaga listeler.
+
+Ornek:
+
+```text
+GET /location/nearby-neighborhoods?latitude=37.78&longitude=30.56&radius_km=5&limit=10
+```
+
+### `GET /map/neighborhood-markers`
+
+Harita markerlari icin tum mahalleleri ozet olarak doner.
+
+### `GET /map/neighborhood-markers/with-scores`
+
+Harita uzerinde renkli skor markerlari icin mahalleleri MYKI ozetiyle doner.
+Environmental data olmayan mahallelerde `myki_score` ve `myki_category` `null` gelir.
+
+## 29) Location ve Map Test Akisi
+
+1. `GET /location/nearest-neighborhood?latitude=37.78&longitude=30.56` ile en yakin mahalleyi bul.
+2. `GET /location/nearby-neighborhoods?latitude=37.78&longitude=30.56&radius_km=5&limit=10` ile yakin mahalleleri listele.
+3. `GET /map/neighborhood-markers` ile tum marker verilerini al.
+4. `GET /map/neighborhood-markers/with-scores` ile MYKI ozetli marker verilerini al.
+
+## 30) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
