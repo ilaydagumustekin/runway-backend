@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 import app.models
@@ -19,10 +20,37 @@ app.add_middleware(
 )
 
 
+def ensure_user_profile_columns() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    expected_columns = {
+        "phone_number": "ALTER TABLE users ADD COLUMN phone_number VARCHAR(30)",
+        "profile_image_url": "ALTER TABLE users ADD COLUMN profile_image_url VARCHAR(500)",
+        "preferred_city": "ALTER TABLE users ADD COLUMN preferred_city VARCHAR(80)",
+        "preferred_district": "ALTER TABLE users ADD COLUMN preferred_district VARCHAR(80)",
+    }
+
+    with engine.begin() as connection:
+        existing_tables = connection.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+        ).fetchall()
+        if not existing_tables:
+            return
+
+        rows = connection.execute(text("PRAGMA table_info(users)")).fetchall()
+        existing_columns = {row[1] for row in rows}
+
+        for column_name, alter_sql in expected_columns.items():
+            if column_name not in existing_columns:
+                connection.execute(text(alter_sql))
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_user_profile_columns()
 
         if settings.seed_demo_data:
             db = SessionLocal()

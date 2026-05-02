@@ -181,6 +181,35 @@ JSON body ile giriş için alternatif endpointtir.
 Authorization: Bearer your-jwt-token
 ```
 
+### `PATCH /users/me`
+
+Giris yapan kullanicinin profil bilgilerini kismi olarak gunceller. Email guncellemesi bu endpointte yapilmaz.
+
+Ornek request body:
+
+```json
+{
+  "full_name": "Ada Lovelace",
+  "phone_number": "+905551112233",
+  "profile_image_url": "https://example.com/profile.png",
+  "preferred_city": "Isparta",
+  "preferred_district": "Merkez"
+}
+```
+
+### `PATCH /users/me/password`
+
+Giris yapan kullanicinin sifresini degistirir.
+
+Ornek request body:
+
+```json
+{
+  "current_password": "strongpass123",
+  "new_password": "newstrongpass456"
+}
+```
+
 ### `POST /auth/logout`
 
 Şimdilik placeholder response döner:
