@@ -96,6 +96,7 @@ uvicorn app.main:app --reload
 - `GET /statistics/neighborhood/{neighborhood_id}/chart-data`
 - `GET /data-sources`
 - `GET /data-sources/{source_name}`
+- `GET /neighborhoods/{neighborhood_id}/details`
 
 ## 7) Test Akışı
 
@@ -623,7 +624,73 @@ Desteklenen `source_name` ornekleri:
 4. `GET /data-sources` ile veri kaynaklarini listele.
 5. `GET /data-sources/openaq` gibi bir endpoint ile tek kaynak detayini al.
 
-## 26) Notlar
+## 26) Neighborhood Details Endpointi
+
+Swagger icinde `Neighborhood Details` tag'i altinda asagidaki endpoint gorunur:
+
+### `GET /neighborhoods/{neighborhood_id}/details`
+
+Mahalle detay sayfasi icin birlesik veri doner. Tek response icinde mahalle bilgisi, son environmental data, MYKI, grafik ozeti ve veri kaynaklari yer alir.
+
+Ornek response yapisi:
+
+```json
+{
+  "neighborhood": {
+    "id": 1,
+    "name": "Cunur",
+    "city": "Isparta",
+    "district": "Merkez",
+    "latitude": 37.8344,
+    "longitude": 30.5267,
+    "boundary_data": null
+  },
+  "latest_environmental_data": {
+    "id": 1,
+    "aqi": 55,
+    "pm25": 18.5,
+    "pm10": 35.2,
+    "no2": 22.1,
+    "o3": 40.0,
+    "green_area_ratio": 32.5,
+    "noise_level_dba": 58.0,
+    "created_at": "2026-05-02T12:00:00"
+  },
+  "myki": {
+    "score": 66.04,
+    "category": "high"
+  },
+  "chart_summary": {
+    "labels": ["2026-05-01"],
+    "aqi": [55.0],
+    "noise_level_dba": [58.0],
+    "green_area_ratio": [32.5],
+    "myki_score": [66.04]
+  },
+  "data_sources": [
+    {
+      "name": "OpenAQ",
+      "type": "air_quality",
+      "status": "planned"
+    }
+  ]
+}
+```
+
+Not:
+
+- Mahalle bulunamazsa `404` doner.
+- Environmental data yoksa `latest_environmental_data` ve `myki` `null` doner.
+- Bu durumda `chart_summary` bos diziler ile gelir.
+
+## 27) Neighborhood Details Test Akisi
+
+1. `GET /neighborhoods/{neighborhood_id}/details` ile birlesik mahalle detay verisini al.
+2. `GET /statistics/neighborhood/{neighborhood_id}/summary` ile summary sonucu karsilastir.
+3. `GET /statistics/neighborhood/{neighborhood_id}/chart-data` ile grafik ozetini karsilastir.
+4. `GET /data-sources` ile veri kaynagi listesiyle ayni kaynaklarin dondugunu kontrol et.
+
+## 28) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
