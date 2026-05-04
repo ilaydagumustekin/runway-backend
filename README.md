@@ -43,6 +43,10 @@ Demo mahalle seed verileri Isparta / Merkez odaklidir:
 - Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
+## Requirements Status
+
+Gereksinimlerin backend karsiliklari ve durum ozeti icin [REQUIREMENTS_STATUS.md](/Users/ilaydagumustekin/Documents/Codex/2026-05-01/repository-https-github-com-ilaydagumustekin-runway/REQUIREMENTS_STATUS.md) dosyasina bakin.
+
 ## 5) Kullanılan Teknolojiler
 
 - Python
