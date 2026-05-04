@@ -77,7 +77,10 @@ Gereksinimlerin backend karsiliklari ve durum ozeti icin [REQUIREMENTS_STATUS.md
 - `DELETE /favorites/{neighborhood_id}`
 - `POST /route-history`
 - `GET /route-history`
+- `GET /route-history/favorites`
 - `GET /route-history/{route_history_id}`
+- `PATCH /route-history/{route_history_id}/favorite`
+- `PATCH /route-history/{route_history_id}/unfavorite`
 - `DELETE /route-history/{route_history_id}`
 - `POST /feedback`
 - `GET /feedback/my`
@@ -311,9 +314,21 @@ Bearer token ile giriş yapan kullanıcı için rota geçmişi kaydı oluşturur
 
 Giriş yapan kullanıcının rota geçmişini en yeniden en eskiye doğru listeler. Kayıt yoksa boş liste döner.
 
+### `GET /route-history/favorites`
+
+Giriş yapan kullanıcının sadece favori işaretli rota geçmişi kayıtlarını en yeniden en eskiye doğru listeler. Kayıt yoksa boş liste döner.
+
 ### `GET /route-history/{route_history_id}`
 
 Sadece giriş yapan kullanıcının kendi rota geçmişi kaydını döner. Kayıt yoksa veya başka kullanıcıya aitse `404` döner.
+
+### `PATCH /route-history/{route_history_id}/favorite`
+
+Sadece giriş yapan kullanıcının kendi rota geçmişi kaydını favori yapar ve güncellenmiş kaydı döner.
+
+### `PATCH /route-history/{route_history_id}/unfavorite`
+
+Sadece giriş yapan kullanıcının kendi rota geçmişi kaydını favoriden çıkarır ve güncellenmiş kaydı döner.
 
 ### `DELETE /route-history/{route_history_id}`
 
@@ -334,8 +349,11 @@ Başarılı response:
 3. `POST /routes/recommend` ile rota önerisi al.
 4. `POST /route-history` ile önerilen rotayı geçmişe kaydet.
 5. `GET /route-history` ile geçmiş rotaları listele.
-6. `GET /route-history/{route_history_id}` ile tek kaydı görüntüle.
-7. `DELETE /route-history/{route_history_id}` ile kaydı sil.
+6. `PATCH /route-history/{route_history_id}/favorite` ile bir rotayı favori yap.
+7. `GET /route-history/favorites` ile sadece favori rotaları listele.
+8. `PATCH /route-history/{route_history_id}/unfavorite` ile favoriden çıkar.
+9. `GET /route-history/{route_history_id}` ile tek kaydı görüntüle.
+10. `DELETE /route-history/{route_history_id}` ile kaydı sil.
 
 ## 14) Feedback Endpointleri
 

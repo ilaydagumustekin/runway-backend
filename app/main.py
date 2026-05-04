@@ -46,11 +46,35 @@ def ensure_user_profile_columns() -> None:
                 connection.execute(text(alter_sql))
 
 
+def ensure_route_history_columns() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    expected_columns = {
+        "is_favorite": "ALTER TABLE route_history ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0",
+    }
+
+    with engine.begin() as connection:
+        existing_tables = connection.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='route_history'")
+        ).fetchall()
+        if not existing_tables:
+            return
+
+        rows = connection.execute(text("PRAGMA table_info(route_history)")).fetchall()
+        existing_columns = {row[1] for row in rows}
+
+        for column_name, alter_sql in expected_columns.items():
+            if column_name not in existing_columns:
+                connection.execute(text(alter_sql))
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     try:
         Base.metadata.create_all(bind=engine)
         ensure_user_profile_columns()
+        ensure_route_history_columns()
 
         if settings.seed_demo_data:
             db = SessionLocal()

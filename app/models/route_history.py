@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -18,6 +18,7 @@ class RouteHistory(Base):
     destination_longitude: Mapped[float] = mapped_column(Float, nullable=False)
     estimated_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     environmental_score: Mapped[float] = mapped_column(Float, nullable=False)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User", back_populates="route_history_entries")

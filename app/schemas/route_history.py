@@ -23,6 +23,7 @@ class RouteHistoryResponse(BaseModel):
     destination_longitude: float
     estimated_duration_minutes: int
     environmental_score: float
+    is_favorite: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
