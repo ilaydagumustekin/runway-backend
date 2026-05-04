@@ -35,6 +35,9 @@ Varsayılan olarak SQLite kullanılır:
 uvicorn app.main:app --reload
 ```
 
+Demo mahalle seed verileri Isparta / Merkez odaklidir:
+`Çünür`, `Bahçelievler`, `Davraz`, `Fatih`, `Modernevler`.
+
 ## 4) Dokümantasyon
 
 - Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
