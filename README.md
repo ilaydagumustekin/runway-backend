@@ -106,6 +106,7 @@ uvicorn app.main:app --reload
 - `PATCH /navigation/{navigation_session_id}/complete`
 - `PATCH /navigation/{navigation_session_id}/cancel`
 - `GET /navigation/history`
+- `GET /dashboard/home`
 
 ## 7) Test Akışı
 
@@ -822,7 +823,30 @@ Kullanicinin tum navigasyon oturumlarini en yeniden en eskiye listeler.
 4. `PATCH /navigation/{navigation_session_id}/complete` veya `cancel` ile session durumunu guncelle.
 5. `GET /navigation/history` ile gecmis navigasyon oturumlarini listele.
 
-## 32) Notlar
+## 32) Dashboard Endpointi
+
+Swagger icinde `Dashboard` tag'i altinda asagidaki endpoint gorunur:
+
+### `GET /dashboard/home`
+
+Authorization Bearer token ister. Swift ana sayfasi icin tek response icinde mahalle, cevre skoru, hizli metrikler, anlik durum kartlari, mock hava durumu, okunmamis bildirim sayisi ve aktif rota bilgisi dondurur.
+
+Desteklenen kullanimlar:
+
+```text
+GET /dashboard/home
+GET /dashboard/home?neighborhood_id=1
+GET /dashboard/home?latitude=37.8344&longitude=30.5267
+```
+
+Fallback sirası:
+
+1. `neighborhood_id`
+2. `latitude/longitude` ile en yakin mahalle
+3. kullanicinin `preferred_city/preferred_district`
+4. ilk kayitli mahalle
+
+## 33) Notlar
 
 - `Noise Measurements` endpointinde standart alan adı `noise_level_dba` kullanılır.
 - Geriye dönük uyumluluk için `dba` gönderilirse backend bunu kabul eder.
