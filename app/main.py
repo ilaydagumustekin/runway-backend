@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -6,18 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 import app.models
 from app.core.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routes import admin_data, admin_users, auth, dashboard, environmental_data, feedback, favorites, location, myki, navigation, neighborhood_details, neighborhoods, noise_measurements, notifications, placeholders, route_history, routes, statistics, users
+from app.routes import admin_data, admin_users, auth, dashboard, environmental_data, feedback, favorites, location, myki, navigation, neighborhood_details, neighborhoods, noise_measurements, notifications, placeholders, route_history, routes, statistics, users, vlm_analysis, validation
 from app.services.seed_service import seed_neighborhoods_if_enabled
-
-app = FastAPI(title=settings.app_name, version=settings.app_version)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 def ensure_user_profile_columns() -> None:
@@ -69,8 +61,9 @@ def ensure_route_history_columns() -> None:
                 connection.execute(text(alter_sql))
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    """Modern lifespan event handler for FastAPI 0.115+."""
     try:
         Base.metadata.create_all(bind=engine)
         ensure_user_profile_columns()
@@ -84,7 +77,19 @@ def on_startup() -> None:
                 db.close()
     except SQLAlchemyError:
         # Keeps API process alive if DB is not available yet.
-        return
+        pass
+    yield
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/", tags=["Default"])
@@ -119,3 +124,5 @@ app.include_router(notifications.admin_notifications_router)
 app.include_router(statistics.statistics_router)
 app.include_router(statistics.data_sources_router)
 app.include_router(location.router)
+app.include_router(vlm_analysis.router)
+app.include_router(validation.router)

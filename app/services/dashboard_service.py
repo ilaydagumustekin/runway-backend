@@ -23,6 +23,7 @@ from app.schemas.dashboard import (
 from app.services.location_service import find_nearest_neighborhood
 from app.services.myki_service import calculate_myki_from_environmental_data
 from app.services.statistics_service import get_latest_environmental_record
+from app.services.external.weather_service import fetch_current_weather
 
 
 def _get_fallback_neighborhood(db: Session, current_user: User) -> Neighborhood | None:
@@ -109,14 +110,18 @@ def _environment_status_green(green_area: float) -> tuple[str, str]:
     return "Kötü", "bad"
 
 
-def _build_hourly_weather() -> list[DashboardHourlyWeatherItem]:
-    return [
-        DashboardHourlyWeatherItem(time="Şimdi", temperature=18, condition="cloudy"),
-        DashboardHourlyWeatherItem(time="10:00", temperature=18, condition="cloudy"),
-        DashboardHourlyWeatherItem(time="11:00", temperature=19, condition="cloudy"),
-        DashboardHourlyWeatherItem(time="12:00", temperature=20, condition="cloudy"),
-        DashboardHourlyWeatherItem(time="13:00", temperature=20, condition="cloudy"),
+def _build_hourly_weather(lat: float = 37.76, lon: float = 30.55) -> tuple[list[DashboardHourlyWeatherItem], dict]:
+    """Open-Meteo API'den gerçek hava durumu çeker."""
+    weather_data = fetch_current_weather(lat, lon)
+    hourly_items = [
+        DashboardHourlyWeatherItem(
+            time=h["time"],
+            temperature=h["temperature"],
+            condition=h["condition"],
+        )
+        for h in weather_data.get("hourly_forecast", [])
     ]
+    return hourly_items, weather_data
 
 
 def _get_chart_summary(db: Session, neighborhood_id: int, limit: int = 5) -> dict[str, list[float] | list[str]]:
@@ -266,13 +271,13 @@ def build_dashboard_home(
             DashboardCurrentEnvironmentItem(
                 key="weather",
                 title="Hava Durumu",
-                value=18,
+                value=weather_temp,
                 unit="°C",
-                status="Parçalı Bulutlu",
-                status_key="cloudy",
+                status=weather_cond,
+                status_key=weather_key,
             ),
         ],
-        hourly_weather=_build_hourly_weather(),
+        hourly_weather=hourly_weather_items,
         notifications=DashboardNotificationsResponse(
             unread_count=_get_unread_notification_count(db, current_user)
         ),

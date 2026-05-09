@@ -9,3 +9,15 @@ python-jose[cryptography]
 passlib[bcrypt]
 bcrypt<4.0
 python-multipart
+# --- Scientific / ML ---
+scikit-fuzzy
+scikit-learn
+numpy
+pandas
+joblib
+# --- VLM / Image ---
+openai
+Pillow
+# --- Testing ---
+pytest
+pytest-asyncio

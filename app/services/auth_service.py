@@ -14,6 +14,19 @@ from app.models.user import User
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+# ── Token Blacklist (in-memory, sunucu yeniden başlatılınca sıfırlanır) ──
+_token_blacklist: set[str] = set()
+
+
+def blacklist_token(token: str) -> None:
+    """Token'ı blacklist'e ekler — logout işleminde kullanılır."""
+    _token_blacklist.add(token)
+
+
+def is_token_blacklisted(token: str) -> bool:
+    """Token blacklist'te mi kontrol eder."""
+    return token in _token_blacklist
+
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -49,6 +62,9 @@ def get_current_active_user(
         detail="Could not validate credentials.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if is_token_blacklisted(token):
+        raise unauthorized
 
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])

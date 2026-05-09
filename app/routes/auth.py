@@ -5,7 +5,15 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import TokenResponse, UserCreate, UserLogin, UserResponse
-from app.services.auth_service import authenticate_user, create_access_token, get_user_by_email, hash_password
+from app.services.auth_service import (
+    authenticate_user,
+    blacklist_token,
+    create_access_token,
+    get_current_active_user,
+    get_user_by_email,
+    hash_password,
+    oauth2_scheme,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -49,5 +57,7 @@ def login_user_json(payload: UserLogin, db: Session = Depends(get_db)) -> TokenR
 
 
 @router.post("/logout")
-def logout_user() -> dict[str, str]:
-    return {"message": "Logout successful. Please remove token on client side."}
+def logout_user(token: str = Depends(oauth2_scheme)) -> dict[str, str]:
+    """Mevcut token'ı sunucu tarafında geçersiz kılar (blacklist)."""
+    blacklist_token(token)
+    return {"message": "Logout successful. Token has been invalidated."}
