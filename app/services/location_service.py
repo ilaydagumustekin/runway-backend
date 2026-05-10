@@ -1,3 +1,7 @@
+import json
+import logging
+import time
+import urllib.request
 from math import asin, cos, radians, sin, sqrt
 
 from sqlalchemy import select
@@ -13,6 +17,12 @@ from app.schemas.location import (
 )
 from app.services.myki_service import calculate_myki_from_environmental_data
 from app.services.statistics_service import get_latest_environmental_record
+
+_logger = logging.getLogger(__name__)
+
+_geocode_cache: dict[str, str | None] = {}
+_geocode_cache_ts: dict[str, float] = {}
+_GEOCODE_TTL = 300
 
 
 def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -103,6 +113,49 @@ def get_neighborhood_markers(db: Session) -> list[NeighborhoodMarkerResponse]:
         )
         for neighborhood in neighborhoods
     ]
+
+
+def reverse_geocode_neighborhood_name(lat: float, lon: float) -> str | None:
+    cache_key = f"{lat:.5f},{lon:.5f}"
+    now = time.time()
+    if cache_key in _geocode_cache and (now - _geocode_cache_ts.get(cache_key, 0)) < _GEOCODE_TTL:
+        return _geocode_cache[cache_key]
+
+    url = (
+        f"https://nominatim.openstreetmap.org/reverse"
+        f"?format=json&lat={lat}&lon={lon}&zoom=16&accept-language=tr"
+    )
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "runway-backend/1.0",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+
+        address = data.get("address", {})
+        name = (
+            address.get("neighbourhood")
+            or address.get("suburb")
+            or address.get("quarter")
+            or address.get("town_district")
+        )
+        if name:
+            for suffix in (" Mahallesi", " mahallesi", " Mah."):
+                name = name.removesuffix(suffix)
+
+        _geocode_cache[cache_key] = name
+        _geocode_cache_ts[cache_key] = now
+        return name
+
+    except Exception as exc:
+        _logger.warning("Nominatim reverse geocode başarısız: %s", exc)
+        _geocode_cache[cache_key] = None
+        _geocode_cache_ts[cache_key] = now
+        return None
 
 
 def get_neighborhood_markers_with_scores(db: Session) -> list[NeighborhoodMarkerWithScoreResponse]:

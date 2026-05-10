@@ -92,9 +92,14 @@ class AirQualityPredictor:
                 if os.path.exists(metrics_path):
                     self.metrics = joblib.load(metrics_path)
                 self.is_trained = True
-                logger.info("Kayitli modeller basariyla yuklendi.")
+                logger.info("[ML_DEBUG] model loaded successfully path=%s", MODEL_DIR)
             except Exception as e:
-                logger.error(f"Model yuklenirken hata olustu: {e}")
+                import traceback as _tb
+                logger.error(
+                    "[ML_DEBUG] model load failed path=%s reason=%s\n%s",
+                    MODEL_DIR, repr(e), _tb.format_exc(),
+                )
+                logger.warning("[ML_DEBUG] prediction disabled, using fallback prediction")
 
     def train(self, data_records: list[dict]):
         """Modeli eğitir."""

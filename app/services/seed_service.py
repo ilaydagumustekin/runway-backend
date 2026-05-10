@@ -46,6 +46,14 @@ def seed_neighborhoods_if_enabled(db: Session) -> None:
             "longitude": 30.5508,
             "boundary_data": None,
         },
+        {
+            "name": "Anadolu",
+            "city": "Isparta",
+            "district": "Merkez",
+            "latitude": 37.7834,
+            "longitude": 30.5532,
+            "boundary_data": None,
+        },
     ]
 
     existing_rows = db.scalars(select(Neighborhood)).all()

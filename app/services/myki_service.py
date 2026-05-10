@@ -55,9 +55,10 @@ _FUZZY_AVAILABLE = True
 
 try:
     from app.services.fuzzy_engine import calculate_fuzzy_myki, myki_category
-except Exception:  # pragma: no cover
+    logger.info("[FUZZY_DEBUG] fuzzy engine loaded successfully")
+except Exception as _fuzzy_load_err:  # pragma: no cover
     _FUZZY_AVAILABLE = False
-    logger.warning("Fuzzy engine yüklenemedi. Ağırlıklı ortalama kullanılacak.")
+    logger.warning("[FUZZY_DEBUG] fuzzy engine load failed: %s", repr(_fuzzy_load_err))
 
 
 def _category_from_score(score: float) -> str:
@@ -92,10 +93,12 @@ def calculate_myki_from_environmental_data(
             score = calculate_fuzzy_myki(aqi, green_area, noise)
             category = myki_category(score)
             return score, category
-        except Exception:
-            logger.exception("Fuzzy hesaplama hatası, fallback kullanılıyor.")
+        except Exception as calc_err:
+            logger.warning("[FUZZY_DEBUG] using weighted average fallback because: %s", repr(calc_err))
 
     # Fallback
+    if not _FUZZY_AVAILABLE:
+        logger.debug("[FUZZY_DEBUG] using weighted average fallback because: fuzzy engine not loaded")
     score = _calculate_weighted_myki(aqi, green_area, noise)
     category = _category_from_score(score)
     return score, category
