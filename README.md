@@ -45,7 +45,7 @@ Demo mahalle seed verileri Isparta / Merkez odaklidir:
 
 ## Requirements Status
 
-Gereksinimlerin backend karsiliklari ve durum ozeti icin [REQUIREMENTS_STATUS.md](/Users/ilaydagumustekin/Documents/Codex/2026-05-01/repository-https-github-com-ilaydagumustekin-runway/REQUIREMENTS_STATUS.md) dosyasina bakin.
+Gereksinimlerin backend karsiliklari ve durum ozeti icin [REQUIREMENTS_STATUS.md](REQUIREMENTS_STATUS.md) dosyasina bakin.
 
 ## 5) Kullanılan Teknolojiler
 
@@ -117,6 +117,8 @@ Gereksinimlerin backend karsiliklari ve durum ozeti icin [REQUIREMENTS_STATUS.md
 - `PATCH /navigation/{navigation_session_id}/cancel`
 - `GET /navigation/history`
 - `GET /dashboard/home`
+- `POST /validation/admin/import-tuik`
+- `POST /admin/vlm/batch-analyze`
 
 ## 7) Test Akışı
 
@@ -128,7 +130,7 @@ Gereksinimlerin backend karsiliklari ve durum ozeti icin [REQUIREMENTS_STATUS.md
 - `POST /noise-measurements`
 - `POST /routes/recommend`
 
-## 8) Future Integrations
+## 8) Core Environmental Intelligence
 
 - Air quality prediction
 - Green area analysis
@@ -228,7 +230,7 @@ Ornek request body:
 
 ### `POST /auth/logout`
 
-Şimdilik placeholder response döner:
+Mevcut access token'i in-memory blacklist'e ekler. Bu blacklist sunucu yeniden baslatilinca sifirlanir.
 
 ```json
 {
@@ -300,7 +302,7 @@ Bearer token ile giriş yapan kullanıcı için rota geçmişi kaydı oluşturur
 
 ```json
 {
-  "route_name": "Daha Temiz ve Sessiz Yaya Rotasi (Mock)",
+  "route_name": "A* Çevresel Optimize Rota",
   "start_latitude": 37.7800,
   "start_longitude": 30.5600,
   "destination_latitude": 37.7700,
@@ -854,7 +856,7 @@ Swagger icinde `Dashboard` tag'i altinda asagidaki endpoint gorunur:
 
 ### `GET /dashboard/home`
 
-Authorization Bearer token ister. Swift ana sayfasi icin tek response icinde mahalle, cevre skoru, hizli metrikler, anlik durum kartlari, mock hava durumu, okunmamis bildirim sayisi ve aktif rota bilgisi dondurur.
+Authorization Bearer token ister. Swift ana sayfasi icin tek response icinde mahalle, cevre skoru, hizli metrikler, anlik durum kartlari, Open-Meteo hava durumu, okunmamis bildirim sayisi ve aktif rota bilgisi dondurur.
 
 Desteklenen kullanimlar:
 

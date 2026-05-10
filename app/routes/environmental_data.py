@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.environmental_data import EnvironmentalData
 from app.models.neighborhood import Neighborhood
 from app.schemas.environmental_data import EnvironmentalDataCreate, EnvironmentalDataResponse
+from app.services.notification_service import create_air_quality_alert_if_needed
 
 router = APIRouter(prefix="/environmental-data", tags=["Environmental Data"])
 
@@ -22,6 +23,12 @@ def create_environmental_data(
     db.add(record)
     db.commit()
     db.refresh(record)
+    create_air_quality_alert_if_needed(
+        db,
+        user_id=None,
+        neighborhood_id=record.neighborhood_id,
+        aqi=record.aqi,
+    )
     return record
 
 

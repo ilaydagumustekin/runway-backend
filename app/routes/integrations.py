@@ -7,7 +7,7 @@ from app.services.air_quality_prediction_service import predict_air_quality_for_
 from app.services.green_area_analysis_service import analyze_neighborhood_green_area
 from app.services.tuik_validation_service import validate_neighborhood_data
 
-router = APIRouter(prefix="/integrations", tags=["Future Integrations"])
+router = APIRouter(prefix="/integrations", tags=["Core Environmental Intelligence"])
 
 
 @router.get("/air-quality-prediction/{neighborhood_id}")

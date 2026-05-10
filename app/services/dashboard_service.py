@@ -219,6 +219,10 @@ def build_dashboard_home(
     noise_status, noise_status_key = _environment_status_noise(noise)
     green_status, green_status_key = _environment_status_green(green_area)
     chart_summary = _get_chart_summary(db, neighborhood.id)
+    hourly_weather_items, weather_data = _build_hourly_weather(neighborhood.latitude, neighborhood.longitude)
+    weather_temp = weather_data.get("temperature", 0)
+    weather_cond = weather_data.get("condition_text", "Belirsiz")
+    weather_key = weather_data.get("condition_key", "unknown")
 
     return DashboardHomeResponse(
         location=DashboardLocationResponse(

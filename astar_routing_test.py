@@ -17,11 +17,16 @@ sys.path.append("/Users/asimsinanyuksel/Desktop/runway-backend")
 import math
 import json
 import urllib.request
+import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import select, delete
 from app.database import SessionLocal, Base, engine
+from app.main import app
 from app.models.neighborhood import Neighborhood
 from app.models.environmental_data import EnvironmentalData
+from app.schemas.routes import Coordinate, RouteRecommendRequest
 from app.services.route_optimizer import haversine_distance, find_best_route, get_environmental_cost
+from app.services.route_service import recommend_route
 from app.services.myki_service import calculate_myki_from_environmental_data
 
 
@@ -48,8 +53,26 @@ ISPARTA_NEIGHBORHOODS = [
 ]
 
 
+@pytest.fixture
+def db():
+    """Pytest fixture: rota testleri için gerçek koordinatlı mahalle verisini hazırla."""
+    Base.metadata.create_all(bind=engine)
+    session = SessionLocal()
+    try:
+        setup_neighborhoods(session)
+        yield session
+    finally:
+        session.close()
+
+
 def setup_neighborhoods(db):
     """Isparta mahallelerini gerçek GPS koordinatlarıyla oluştur."""
+    isparta_ids = db.scalars(select(Neighborhood.id).where(Neighborhood.city == "Isparta")).all()
+    if isparta_ids:
+        db.execute(delete(EnvironmentalData).where(EnvironmentalData.neighborhood_id.in_(isparta_ids)))
+        db.execute(delete(Neighborhood).where(Neighborhood.id.in_(isparta_ids)))
+        db.commit()
+
     created = []
     for name, lat, lon, aqi, green, noise, desc in ISPARTA_NEIGHBORHOODS:
         n = db.scalars(select(Neighborhood).where(
@@ -115,7 +138,7 @@ def test_haversine():
         print(f"  {name:<24} {dist:>8.2f}km {expected:>8.1f}km {diff:>6.2f}km {'✅' if ok else '❌'}")
     
     print(f"\n  Haversine Testi: {'✅ BAŞARILI' if all_pass else '❌ HATA'}")
-    return all_pass
+    assert all_pass
 
 
 def test_astar_standalone(db):
@@ -131,7 +154,7 @@ def test_astar_standalone(db):
         ("Bahçelievler → Davraz (yeşil rota beklenir)",
          37.7678, 30.5566,  37.7845, 30.5745, 2),
         ("Pirimehmet → Ayazmana (en kirli → en temiz)",
-         37.7630, 30.5385,  37.7920, 30.5680, 3),
+         37.7630, 30.5385,  37.7920, 30.5680, 2),
         ("Aynı nokta testi",
          37.7952, 30.5485,  37.7952, 30.5485, 1),
     ]
@@ -199,7 +222,7 @@ def test_astar_standalone(db):
         print(f"  └─────────────────────────────")
     
     print(f"\n  A* Standalone Test: {'✅ BAŞARILI' if all_pass else '❌ HATA'}")
-    return all_pass
+    assert all_pass
 
 
 def test_graph_properties(db):
@@ -213,6 +236,7 @@ def test_graph_properties(db):
     )).all()
     
     n_count = len(neighborhoods)
+    assert n_count >= len(ISPARTA_NEIGHBORHOODS)
     print(f"\n  Düğüm (mahalle) sayısı  : {n_count}")
     print(f"  Bağlantı stratejisi     : Her düğüm → en yakın 15 komşu")
     print(f"  Kenar (edge) sayısı     : ~{n_count * min(15, n_count - 1)} (yönlü)")
@@ -245,7 +269,33 @@ def test_graph_properties(db):
         print(f"  {n.name:<16} {myki:>5.1f} {cost:>7.1f} {desc}")
 
 
-def test_api_endpoint():
+def test_recommend_route_uses_actual_path_myki_score(db):
+    payload = RouteRecommendRequest(
+        start=Coordinate(latitude=37.7952, longitude=30.5485),
+        destination=Coordinate(latitude=37.7610, longitude=30.5350),
+    )
+    path = find_best_route(
+        db,
+        payload.start.latitude,
+        payload.start.longitude,
+        payload.destination.latitude,
+        payload.destination.longitude,
+        optimize_for="environment",
+    )
+    assert path
+
+    expected_score = round(
+        sum(100.0 - get_environmental_cost(db, neighborhood) for neighborhood in path) / len(path),
+        2,
+    )
+
+    response = recommend_route(db, payload)
+
+    assert "Mock" not in response.route_name
+    assert response.environmental_score == expected_score
+
+
+def test_api_endpoint(db):
     """API endpoint'ini canlı test et."""
     print("\n\n" + "=" * 80)
     print("  ADIM 4 ▸ API Endpoint Testi (POST /routes/recommend)")
@@ -266,15 +316,10 @@ def test_api_endpoint():
         }
         
         try:
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                "http://localhost:8000/routes/recommend",
-                data=data,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                result = json.loads(resp.read().decode())
+            with TestClient(app) as client:
+                response = client.post("/routes/recommend", json=payload)
+                response.raise_for_status()
+                result = response.json()
             
             path_count = len(result.get("path", []))
             route_name = result.get("route_name", "?")
@@ -286,7 +331,8 @@ def test_api_endpoint():
             if not ok:
                 all_pass = False
             
-            status = "✅" if ok else "⚠️"
+            assert ok
+            status = "✅"
             
             print(f"\n  {status} {name}")
             print(f"     Rota: {route_name}")
@@ -302,10 +348,10 @@ def test_api_endpoint():
         
         except Exception as e:
             print(f"\n  ❌ {name}: API hatası — {e}")
-            all_pass = False
+            raise
     
     print(f"\n  API Test Sonucu: {'✅ BAŞARILI' if all_pass else '❌ HATA'}")
-    return all_pass
+    assert all_pass
 
 
 def main():

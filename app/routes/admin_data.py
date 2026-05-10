@@ -19,6 +19,7 @@ from app.schemas.environmental_data import EnvironmentalDataResponse
 from app.schemas.neighborhood import NeighborhoodResponse
 from app.schemas.route_history import RouteHistoryResponse
 from app.services.auth_service import get_current_active_user
+from app.services.notification_service import create_air_quality_alert_if_needed
 
 router = APIRouter(tags=["Admin Data"])
 
@@ -78,11 +79,19 @@ def update_environmental_data(
     if not record:
         raise HTTPException(status_code=404, detail="Environmental data not found.")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(record, field, value)
 
     db.commit()
     db.refresh(record)
+    if "aqi" in update_data:
+        create_air_quality_alert_if_needed(
+            db,
+            user_id=None,
+            neighborhood_id=record.neighborhood_id,
+            aqi=record.aqi,
+        )
     return record
 
 
@@ -100,11 +109,19 @@ def update_air_quality_data(
     if not record:
         raise HTTPException(status_code=404, detail="Environmental data not found.")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
         setattr(record, field, value)
 
     db.commit()
     db.refresh(record)
+    if "aqi" in update_data:
+        create_air_quality_alert_if_needed(
+            db,
+            user_id=None,
+            neighborhood_id=record.neighborhood_id,
+            aqi=record.aqi,
+        )
     return record
 
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -6,7 +6,7 @@ from app.models.neighborhood import Neighborhood
 from app.models.user import User
 from app.services.auth_service import get_current_active_user as get_current_user
 from app.services.tuik_validation_service import validate_neighborhood_data
-from app.services.validation.tuik_data_manager import import_mock_tuik_data
+from app.services.validation.tuik_data_manager import import_tuik_csv_data
 from app.schemas.validation import ValidationSummary
 
 router = APIRouter(prefix="/validation", tags=["Validation"])
@@ -39,11 +39,20 @@ def validate_neighborhood(
 
 @router.post("/admin/import-tuik")
 def import_tuik_data(
+    file: UploadFile = File(...),
     db: Session = Depends(get_db),
     admin: User = Depends(check_admin)
 ):
     """
-    (MOCK) TUIK referans verilerini import eder.
+    TUIK referans verilerini CSV dosyasindan import eder.
     """
-    import_mock_tuik_data(db)
-    return {"status": "success", "message": "TUIK mock verileri aktarildi."}
+    try:
+        result = import_tuik_csv_data(db, file.file.read())
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "status": "success",
+        "message": "TUIK CSV verileri aktarildi.",
+        **result,
+    }

@@ -7,7 +7,7 @@ Bu dokuman, backend tarafinda bugune kadar gelistirilen endpointlere gore 34 ger
 | 1 | Ana Sayfa | Tamamlandı | `GET /dashboard/home` | Swift ana sayfa icin birlesik veri doner. |
 | 2 | Giriş Yap | Tamamlandı | `POST /auth/login`, `POST /auth/login-json` | Swagger ve JSON istemcileri desteklenir. |
 | 3 | Kayıt Ol | Tamamlandı | `POST /auth/register` | Standart kullanici kaydi yapilir. |
-| 4 | Çıkış Yap | Kısmen Tamamlandı | `POST /auth/logout` | Placeholder response var, token blacklist yok. |
+| 4 | Çıkış Yap | Kısmen Tamamlandı | `POST /auth/logout` | In-memory token blacklist var; sunucu yeniden baslatilinca blacklist sifirlanir. |
 | 5 | Kullanıcı Profili | Tamamlandı | `GET /users/me`, `PATCH /users/me`, `PATCH /users/me/password` | Profil alanlari ve sifre guncelleme desteklenir. |
 | 6 | Konum İzni Al | Mobil/iOS Tarafı | - | Izin isteme tamamen istemci tarafindadir. |
 | 7 | Mikrofon İzni Al | Mobil/iOS Tarafı | - | Izin isteme tamamen istemci tarafindadir. |
@@ -24,7 +24,7 @@ Bu dokuman, backend tarafinda bugune kadar gelistirilen endpointlere gore 34 ger
 | 18 | Yürüyüş Rotası Önerisi Görüntüleme | Tamamlandı | `POST /routes/recommend` | Rota onerisi backend tarafinda A* algoritmasi ile cevresel skora gore hesaplanir. |
 | 19 | Rota Seçme | Tamamlandı | `POST /navigation/start`, `POST /route-history` | Route history veya direkt rota bilgisiyle navigasyon secimi desteklenir. |
 | 20 | Navigasyon Başlatma | Tamamlandı | `POST /navigation/start`, `GET /navigation/current`, `PATCH /navigation/{navigation_session_id}/complete`, `PATCH /navigation/{navigation_session_id}/cancel`, `GET /navigation/history` | Gercek turn-by-turn mobil tarafta, session yonetimi backendde. |
-| 21 | Hava Kalitesi Uyarısı Alma | Kısmen Tamamlandı | `GET /notifications`, `POST /admin/notifications`, `app/services/notification_service.py#create_air_quality_alert_if_needed` | Notification modeli ve helper var; otomatik tetikleme tum akislara bagli degil. |
+| 21 | Hava Kalitesi Uyarısı Alma | Tamamlandı | `GET /notifications`, `POST /admin/notifications`, `app/services/notification_service.py#create_air_quality_alert_if_needed` | Environmental data create/admin AQI update akislarinda otomatik air quality bildirimi olusur. |
 | 22 | Çevresel Bildirim Alma | Tamamlandı | `GET /notifications`, `PATCH /notifications/{notification_id}/read`, `POST /admin/notifications`, `GET /admin/notifications`, `DELETE /admin/notifications/{notification_id}` | Kullaniciya ozel ve genel bildirimler desteklenir. |
 | 23 | Favori Mahalle Ekleme | Tamamlandı | `POST /favorites/{neighborhood_id}` | Ayni mahalle tekrar favorilenemez. |
 | 24 | Favori Mahalle Silme | Tamamlandı | `DELETE /favorites/{neighborhood_id}` | Favori kaydi silinebilir. |
@@ -44,4 +44,4 @@ Bu dokuman, backend tarafinda bugune kadar gelistirilen endpointlere gore 34 ger
 - Kullanici odakli cekirdek backend gereksinimlerinin buyuk kismi tamamlanmis durumda.
 - Izin isteme ve gercek harita/navigasyon cizimi gibi konular mobil/iOS tarafinda.
 - Admin veri yonetimi ve admin geri bildirim akislarinin backend karsiliklari mevcut.
-- Bazi alanlarda placeholder veya MVP seviye uygulamalar bulunuyor: `logout`, mock hava durumu, statik veri kaynaklari, otomatik hava kalitesi uyarisi helper'i gibi.
+- Bazi alanlarda MVP seviye uygulamalar bulunuyor: in-memory `logout` blacklist ve statik veri kaynagi katalogu gibi.

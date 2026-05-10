@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import app.models
 from app.core.config import settings
 from app.database import Base, SessionLocal, engine
-from app.routes import admin_data, admin_users, auth, dashboard, environmental_data, feedback, favorites, location, myki, navigation, neighborhood_details, neighborhoods, noise_measurements, notifications, placeholders, route_history, routes, statistics, users, vlm_analysis, validation
+from app.routes import admin_data, admin_users, auth, dashboard, environmental_data, feedback, favorites, integrations, location, myki, navigation, neighborhood_details, neighborhoods, noise_measurements, notifications, route_history, routes, statistics, users, vlm_analysis, validation
 from app.services.seed_service import seed_neighborhoods_if_enabled
 
 
@@ -108,7 +108,7 @@ app.include_router(environmental_data.router)
 app.include_router(myki.router)
 app.include_router(noise_measurements.router)
 app.include_router(routes.router)
-app.include_router(placeholders.router)
+app.include_router(integrations.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(favorites.router)
