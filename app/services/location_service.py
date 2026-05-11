@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.neighborhood import Neighborhood
 from app.schemas.location import (
+    LocationSearchResultItem,
     NearbyNeighborhoodResponse,
     NeighborhoodMarkerResponse,
     NeighborhoodMarkerWithScoreResponse,
@@ -156,6 +157,115 @@ def reverse_geocode_neighborhood_name(lat: float, lon: float) -> str | None:
         _geocode_cache[cache_key] = None
         _geocode_cache_ts[cache_key] = now
         return None
+
+
+_search_cache: dict[str, tuple[list[LocationSearchResultItem], float]] = {}
+_SEARCH_TTL = 120  # 2 dakika
+
+
+def _nominatim_search(q: str, limit: int = 5) -> list[LocationSearchResultItem]:
+    url = (
+        f"https://nominatim.openstreetmap.org/search"
+        f"?q={urllib.request.quote(q + ' Isparta')}&format=json"
+        f"&limit={limit}&accept-language=tr&countrycodes=tr&addressdetails=1"
+    )
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json", "User-Agent": "runway-backend/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            results = json.loads(resp.read().decode())
+    except Exception as exc:
+        _logger.warning("Nominatim search başarısız q=%r: %s", q, exc)
+        return []
+
+    # Isparta Merkez ilçesi için kaba koordinat kutusu
+    _LAT_MIN, _LAT_MAX = 37.65, 37.95
+    _LON_MIN, _LON_MAX = 30.40, 30.70
+
+    items: list[LocationSearchResultItem] = []
+    for r in results:
+        addr = r.get("address", {})
+        try:
+            lat, lon = float(r["lat"]), float(r["lon"])
+        except (KeyError, ValueError):
+            continue
+        if not (_LAT_MIN <= lat <= _LAT_MAX and _LON_MIN <= lon <= _LON_MAX):
+            continue
+        raw_name = (
+            addr.get("neighbourhood")
+            or addr.get("suburb")
+            or addr.get("quarter")
+            or addr.get("village")
+            or addr.get("town")
+            or r.get("display_name", "").split(",")[0].strip()
+        )
+        for _sfx in (" Mahallesi", " mahallesi", " Mah."):
+            raw_name = raw_name.removesuffix(_sfx)
+        name = raw_name
+        city = addr.get("province") or addr.get("state") or "Isparta"
+        district = addr.get("city") or addr.get("county") or ""
+        if district.endswith(" Merkez"):
+            district = district[: -len(" Merkez")]
+        items.append(
+            LocationSearchResultItem(
+                name=name,
+                display_name=r.get("display_name", name),
+                city=city,
+                district=district,
+                latitude=float(r["lat"]),
+                longitude=float(r["lon"]),
+                neighborhood_id=None,
+                source="geocoding",
+            )
+        )
+    return items
+
+
+def search_locations(db: Session, q: str) -> list[LocationSearchResultItem]:
+    q = q.strip()
+    if not q:
+        return []
+
+    cache_key = q.lower()
+    now = time.time()
+    if cache_key in _search_cache:
+        cached, ts = _search_cache[cache_key]
+        if now - ts < _SEARCH_TTL:
+            return cached
+
+    # 1) DB araması (case-insensitive contains)
+    db_rows = list(
+        db.scalars(
+            select(Neighborhood).where(Neighborhood.name.ilike(f"%{q}%"))
+        ).all()
+    )
+    db_results: list[LocationSearchResultItem] = [
+        LocationSearchResultItem(
+            name=n.name,
+            display_name=f"{n.name}, {n.district}, {n.city}",
+            city=n.city,
+            district=n.district,
+            latitude=n.latitude,
+            longitude=n.longitude,
+            neighborhood_id=n.id,
+            source="database",
+        )
+        for n in db_rows
+    ]
+
+    # 2) DB sonucu yetersizse Nominatim ile tamamla
+    geocoding_results: list[LocationSearchResultItem] = []
+    if len(db_results) < 3:
+        raw = _nominatim_search(q)
+        # DB'de zaten olan isimleri tekrar ekleme
+        existing_names = {r.name.lower() for r in db_results}
+        geocoding_results = [r for r in raw if r.name.lower() not in existing_names]
+
+    merged = db_results + geocoding_results
+    _search_cache[cache_key] = (merged, now)
+    return merged
 
 
 def get_neighborhood_markers_with_scores(db: Session) -> list[NeighborhoodMarkerWithScoreResponse]:

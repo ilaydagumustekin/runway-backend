@@ -43,3 +43,14 @@ class NeighborhoodMarkerWithScoreResponse(BaseModel):
     longitude: float
     myki_score: float | None
     myki_category: str | None
+
+
+class LocationSearchResultItem(BaseModel):
+    name: str
+    display_name: str
+    city: str
+    district: str
+    latitude: float
+    longitude: float
+    neighborhood_id: int | None
+    source: str  # "database" | "geocoding"

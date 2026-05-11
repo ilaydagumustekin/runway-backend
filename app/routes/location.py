@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas.location import (
+    LocationSearchResultItem,
     NearbyNeighborhoodResponse,
     NeighborhoodMarkerResponse,
     NeighborhoodMarkerWithScoreResponse,
@@ -13,9 +14,18 @@ from app.services.location_service import (
     find_nearby_neighborhoods,
     get_neighborhood_markers,
     get_neighborhood_markers_with_scores,
+    search_locations,
 )
 
 router = APIRouter(tags=["Location"])
+
+
+@router.get("/location/search", response_model=list[LocationSearchResultItem])
+def search_locations_endpoint(
+    q: str = Query(..., min_length=1, description="Mahalle, sokak veya yer adı"),
+    db: Session = Depends(get_db),
+) -> list[LocationSearchResultItem]:
+    return search_locations(db, q)
 
 
 @router.get("/location/nearest-neighborhood", response_model=NearestNeighborhoodResponse)
