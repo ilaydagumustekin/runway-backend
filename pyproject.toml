@@ -19,8 +19,17 @@ dependencies = [
     "passlib[bcrypt]",
     "bcrypt<4.0",
     "python-multipart",
+    # --- Scientific / ML ---
     "numpy==1.26.4",
+    "scikit-learn==1.6.1",
+    "scikit-fuzzy",
+    "pandas",
+    "joblib",
+    "networkx",
+    # xgboost intentionally optional (size/lambda limits); code falls back to RF+GB.
+    # --- VLM / Image ---
     "Pillow",
+    "openai",
 ]
 
 [tool.vercel]

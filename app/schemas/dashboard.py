@@ -13,6 +13,8 @@ class DashboardLocationResponse(BaseModel):
 
 
 class DashboardEnvironmentScoreResponse(BaseModel):
+    """Skor ve kategori GET /myki/{id} ile aynı kaynaktan (get_myki_for_neighborhood)."""
+
     score: float | None
     category: str | None
     category_key: str | None

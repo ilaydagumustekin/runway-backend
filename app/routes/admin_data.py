@@ -190,3 +190,14 @@ def update_route_history(
     db.commit()
     db.refresh(record)
     return record
+
+
+@router.post("/admin/ml/train")
+def trigger_air_quality_ml_train(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user),
+) -> dict:
+    """`environmental_data` içindeki AQI kayıtlarından model eğitir ve `saved_models/` altına yazar."""
+    from app.services.ml.model_trainer import train_model_from_db
+
+    return train_model_from_db(db)

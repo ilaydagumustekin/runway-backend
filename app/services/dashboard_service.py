@@ -20,8 +20,9 @@ from app.schemas.dashboard import (
     DashboardNotificationsResponse,
     DashboardQuickMetricsResponse,
 )
+from app.services.air_quality_fetch_service import fetch_and_persist_air_quality
 from app.services.location_service import find_nearest_neighborhood
-from app.services.myki_service import calculate_myki_from_environmental_data
+from app.services.myki_service import calculate_myki_from_environmental_data, get_myki_for_neighborhood
 from app.services.statistics_service import get_latest_environmental_record
 from app.services.external.weather_service import fetch_current_weather
 
@@ -56,14 +57,6 @@ def resolve_dashboard_neighborhood(
             return db.get(Neighborhood, nearest.neighborhood.id)
 
     return _get_fallback_neighborhood(db, current_user)
-
-
-def _map_score_category(score: float) -> tuple[str, str]:
-    if score >= 70:
-        return "İyi", "good"
-    if score >= 40:
-        return "Orta", "medium"
-    return "Kötü", "bad"
 
 
 def _relative_updated_text(updated_at: datetime | None) -> str:
@@ -207,18 +200,17 @@ def build_dashboard_home(
     if not neighborhood:
         return None
 
-    latest_record = get_latest_environmental_record(db, neighborhood.id)
+    fetch_and_persist_air_quality(neighborhood, db)
 
-    aqi: float | None = latest_record.aqi if latest_record else None
-    noise: float | None = latest_record.noise_level_dba if latest_record else None
-    green_area: float | None = latest_record.green_area_ratio if latest_record else None
+    latest_record = get_latest_environmental_record(db, neighborhood.id)
+    myki_payload = get_myki_for_neighborhood(db, neighborhood.id)
 
     if latest_record:
-        myki_score, _ = calculate_myki_from_environmental_data(latest_record)
+        aqi = float(latest_record.aqi) if latest_record.aqi is not None else 0.0
+        noise = float(latest_record.noise_level_dba) if latest_record.noise_level_dba is not None else 0.0
+        green_area = float(latest_record.green_area_ratio) if latest_record.green_area_ratio is not None else 0.0
     else:
-        myki_score = None
-
-    score_label, score_key = _map_score_category(myki_score) if myki_score is not None else (None, None)
+        aqi = noise = green_area = None
     air_status, air_status_key = _environment_status_aqi(aqi) if aqi is not None else (None, None)
     noise_status, noise_status_key = _environment_status_noise(noise) if noise is not None else (None, None)
     green_status, green_status_key = _environment_status_green(green_area) if green_area is not None else (None, None)
@@ -243,9 +235,9 @@ def build_dashboard_home(
             longitude=neighborhood.longitude,
         ),
         environment_score=DashboardEnvironmentScoreResponse(
-            score=round(myki_score, 2) if myki_score is not None else None,
-            category=score_label,
-            category_key=score_key,
+            score=round(myki_payload.score, 2) if myki_payload else None,
+            category=myki_payload.category if myki_payload else None,
+            category_key=myki_payload.category if myki_payload else None,
             last_updated_text=_relative_updated_text(latest_record.created_at if latest_record else None),
             updated_at=latest_record.created_at if latest_record else None,
         ),

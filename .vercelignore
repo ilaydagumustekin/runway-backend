@@ -5,5 +5,6 @@ __pycache__
 .git
 .env
 *.db
-*.joblib
 *.joblib.bak
+# NOT excluding *.joblib: pre-trained models must ship with deployment
+# because Vercel filesystem is read-only (auto-train cannot persist).

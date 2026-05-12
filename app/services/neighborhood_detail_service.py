@@ -30,8 +30,8 @@ def build_neighborhood_detail_response(
     myki = None
 
     if latest_record:
-        myki_score, myki_category = calculate_myki_from_environmental_data(latest_record)
         latest_environmental_data = NeighborhoodDetailEnvironmentalData.model_validate(latest_record)
+        myki_score, myki_category = calculate_myki_from_environmental_data(latest_record)
         myki = NeighborhoodDetailMYKI(score=myki_score, category=myki_category)
 
     data_sources = [

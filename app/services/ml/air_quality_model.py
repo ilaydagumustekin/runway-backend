@@ -10,16 +10,46 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 _MODEL_AVAILABLE = True
+_XGB_AVAILABLE = True
+_IMPORT_ERRORS: list[str] = []
+
 try:
     from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import mean_absolute_error, r2_score
-    import joblib
-    import pandas as pd
-    from xgboost import XGBRegressor
-except ImportError:
+except ImportError as e:
     _MODEL_AVAILABLE = False
-    logger.warning("scikit-learn, pandas veya xgboost yuklu degil. ML modelleri kullanilamayacak.")
+    _IMPORT_ERRORS.append(f"scikit-learn: {e}")
+
+try:
+    import joblib
+except ImportError as e:
+    _MODEL_AVAILABLE = False
+    _IMPORT_ERRORS.append(f"joblib: {e}")
+
+try:
+    import pandas as pd
+except ImportError as e:
+    _MODEL_AVAILABLE = False
+    _IMPORT_ERRORS.append(f"pandas: {e}")
+
+# xgboost optional: yoksa RF+GB ensemble ile devam
+try:
+    from xgboost import XGBRegressor
+except ImportError as e:
+    _XGB_AVAILABLE = False
+    XGBRegressor = None  # type: ignore[assignment]
+    _IMPORT_ERRORS.append(f"xgboost (optional): {e}")
+
+if _IMPORT_ERRORS:
+    logger.warning("ML import issues: %s", "; ".join(_IMPORT_ERRORS))
+if not _MODEL_AVAILABLE:
+    logger.warning(
+        "Core ML libs (sklearn/joblib/pandas) eksik; ML modeli devre dışı. "
+        "pip install scikit-learn==1.6.1 joblib pandas"
+    )
+elif not _XGB_AVAILABLE:
+    logger.info("xgboost yok; RF+GB ensemble kullanılacak.")
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
 
@@ -63,57 +93,83 @@ class AirQualityPredictor:
         self.load_model()
         
     def save_model(self):
-        """Eğitilmiş modelleri diske kaydeder."""
+        """Eğitilmiş modelleri diske kaydeder.
+
+        Read-only FS (Vercel/Lambda) durumunda sessizce skip eder; in-memory model
+        zaten predict için yeterli. Yalnızca cold-start sonrası kalıcılık kaybolur.
+        """
         if not self.is_trained:
             return
-            
-        os.makedirs(MODEL_DIR, exist_ok=True)
-        joblib.dump(self.rf_model, os.path.join(MODEL_DIR, "rf_model.joblib"))
-        joblib.dump(self.gb_model, os.path.join(MODEL_DIR, "gb_model.joblib"))
-        joblib.dump(self.xgb_model, os.path.join(MODEL_DIR, "xgb_model.joblib"))
-        joblib.dump(self.metrics, os.path.join(MODEL_DIR, "metrics.joblib"))
-        logger.info("Modeller diske kaydedildi.")
+
+        try:
+            os.makedirs(MODEL_DIR, exist_ok=True)
+            joblib.dump(self.rf_model, os.path.join(MODEL_DIR, "rf_model.joblib"))
+            joblib.dump(self.gb_model, os.path.join(MODEL_DIR, "gb_model.joblib"))
+            if self.xgb_model is not None:
+                joblib.dump(self.xgb_model, os.path.join(MODEL_DIR, "xgb_model.joblib"))
+            joblib.dump(self.metrics, os.path.join(MODEL_DIR, "metrics.joblib"))
+            logger.info("Modeller diske kaydedildi (xgb=%s).", self.xgb_model is not None)
+        except OSError as e:
+            logger.warning(
+                "save_model skipped (read-only fs?): %s — model is still in memory.", e
+            )
 
     def load_model(self):
-        """Diskte kayitli model varsa RAM'e yukler."""
+        """Diskte kayıtlı model varsa RAM'e yükler.
+
+        xgb modeli opsiyonel: yoksa veya yüklenemezse RF+GB ile devam edilir.
+        """
         if not _MODEL_AVAILABLE:
             return
-            
+
         rf_path = os.path.join(MODEL_DIR, "rf_model.joblib")
         gb_path = os.path.join(MODEL_DIR, "gb_model.joblib")
         xgb_path = os.path.join(MODEL_DIR, "xgb_model.joblib")
         metrics_path = os.path.join(MODEL_DIR, "metrics.joblib")
-        
-        if os.path.exists(rf_path) and os.path.exists(gb_path) and os.path.exists(xgb_path):
-            try:
-                self.rf_model = joblib.load(rf_path)
-                self.gb_model = joblib.load(gb_path)
-                self.xgb_model = joblib.load(xgb_path)
-                if os.path.exists(metrics_path):
-                    self.metrics = joblib.load(metrics_path)
-                self.is_trained = True
-                logger.info("[ML_DEBUG] model loaded successfully path=%s", MODEL_DIR)
-            except Exception as e:
-                import traceback as _tb
-                logger.error(
-                    "[ML_DEBUG] model load failed path=%s reason=%s\n%s",
-                    MODEL_DIR, repr(e), _tb.format_exc(),
-                )
-                logger.warning("[ML_DEBUG] prediction disabled, using fallback prediction")
 
-    def train(self, data_records: list[dict]):
-        """Modeli eğitir."""
+        if not (os.path.exists(rf_path) and os.path.exists(gb_path)):
+            return
+
+        try:
+            self.rf_model = joblib.load(rf_path)
+            self.gb_model = joblib.load(gb_path)
+            self.xgb_model = None
+            if _XGB_AVAILABLE and os.path.exists(xgb_path):
+                try:
+                    self.xgb_model = joblib.load(xgb_path)
+                except Exception as e:
+                    logger.warning("[ML_DEBUG] xgb load failed (continuing without): %s", e)
+                    self.xgb_model = None
+            if os.path.exists(metrics_path):
+                self.metrics = joblib.load(metrics_path)
+            self.is_trained = True
+            logger.info(
+                "[ML_DEBUG] model loaded path=%s xgb=%s",
+                MODEL_DIR, self.xgb_model is not None,
+            )
+        except Exception as e:
+            # Genelde numpy/sklearn sürüm uyumsuzluğu (pickle protocol)
+            # veya bozuk dosya. Stack trace yerine kısa warning + fallback.
+            self.rf_model = self.gb_model = self.xgb_model = None
+            self.is_trained = False
+            logger.warning(
+                "[ML_DEBUG] model load failed (%s); will retrain on next opportunity.",
+                repr(e),
+            )
+
+    def train(self, data_records: list[dict], min_samples: int = 50):
+        """Modeli eğitir. `min_samples`: ham kayıt sayısı eşiği (lag üretiminden önce)."""
         if not _MODEL_AVAILABLE:
             raise RuntimeError("ML libraries missing")
-            
-        if not data_records or len(data_records) < 50:
+
+        if not data_records or len(data_records) < min_samples:
             logger.warning("Yetersiz veri. Model egitilemiyor.")
             return False
             
         df = pd.DataFrame(data_records)
         df = generate_features(df)
         
-        if len(df) < 20:
+        if len(df) < 15:
             logger.warning("Feature generation sonrasi yetersiz veri.")
             return False
             
@@ -130,28 +186,31 @@ class AirQualityPredictor:
         
         self.rf_model = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
         self.rf_model.fit(X_train, y_train)
-        
+
         self.gb_model = GradientBoostingRegressor(n_estimators=100, learning_rate=0.05, max_depth=5, random_state=42)
         self.gb_model.fit(X_train, y_train)
-        
-        self.xgb_model = XGBRegressor(n_estimators=100, learning_rate=0.05, max_depth=5, random_state=42)
-        self.xgb_model.fit(X_train, y_train)
-        
-        # Test 
-        rf_preds = self.rf_model.predict(X_test)
-        gb_preds = self.gb_model.predict(X_test)
-        xgb_preds = self.xgb_model.predict(X_test)
-        
-        # Ensemble prediction (Average of 3 models)
-        final_preds = (rf_preds + gb_preds + xgb_preds) / 3
-        
+
+        preds_stack = [self.rf_model.predict(X_test), self.gb_model.predict(X_test)]
+        used = ["rf", "gb"]
+
+        if _XGB_AVAILABLE and XGBRegressor is not None:
+            self.xgb_model = XGBRegressor(n_estimators=100, learning_rate=0.05, max_depth=5, random_state=42)
+            self.xgb_model.fit(X_train, y_train)
+            preds_stack.append(self.xgb_model.predict(X_test))
+            used.append("xgb")
+        else:
+            self.xgb_model = None
+
+        final_preds = np.mean(np.vstack(preds_stack), axis=0)
+
         mae = mean_absolute_error(y_test, final_preds)
         r2 = r2_score(y_test, final_preds)
-        
+
         self.metrics = {
             "mae": float(mae),
             "r2": float(r2),
-            "samples_trained": len(X_train)
+            "samples_trained": len(X_train),
+            "models": used,
         }
         self.is_trained = True
         
@@ -187,11 +246,14 @@ class AirQualityPredictor:
                 'aqi_rolling_12h': current_aqi
             }])
             
-            rf_pred = self.rf_model.predict(row)[0]
-            gb_pred = self.gb_model.predict(row)[0]
-            xgb_pred = self.xgb_model.predict(row)[0]
-            predictions[h] = float((rf_pred + gb_pred + xgb_pred) / 3)
-            
+            preds = [
+                float(self.rf_model.predict(row)[0]),
+                float(self.gb_model.predict(row)[0]),
+            ]
+            if self.xgb_model is not None:
+                preds.append(float(self.xgb_model.predict(row)[0]))
+            predictions[h] = sum(preds) / len(preds)
+
         return predictions
 
 # Singleton instance

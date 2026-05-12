@@ -25,6 +25,10 @@ def test_dashboard_home_includes_open_meteo_weather(monkeypatch):
         }
 
     monkeypatch.setattr("app.services.dashboard_service.fetch_current_weather", fake_weather)
+    monkeypatch.setattr(
+        "app.services.dashboard_service.fetch_and_persist_air_quality",
+        lambda neighborhood, db=None: {"neighborhood_id": neighborhood.id, "status": "skipped"},
+    )
 
     try:
         user = User(

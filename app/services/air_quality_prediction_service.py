@@ -11,6 +11,11 @@ from app.services.ml.air_quality_model import predictor
 logger = logging.getLogger(__name__)
 
 
+def _persistence_predictions(current_aqi: float, horizon_hours: list[int]) -> dict[int, float]:
+    """ML yokken son ölçümü ufuk boyunca sabit varsayar."""
+    return {h: float(current_aqi) for h in horizon_hours}
+
+
 def _get_latest_aqi(neighborhood_id: int) -> float:
     """En son `environmental_data` ölçümünden AQI değerini döner.
 
@@ -41,38 +46,43 @@ def _get_latest_aqi(neighborhood_id: int) -> float:
 def predict_air_quality_for_next_hours(neighborhood_id: int, hours: int = 24) -> dict:
     """
     Belirli bir mahalle için hava kalitesi tahminlerini döndürür.
-    Eğitilmiş ML modelini (Random Forest / Gradient Boosting / XGBoost ensemble) kullanır.
-    Başlangıç değeri DB'deki son ölçümdür; ölçüm yoksa 422 döner.
+    Eğitilmiş ensemble varsa onu kullanır; yoksa veya tahmin hata verirse son AQI ile
+    düz çizgi (persistence) döner. Ölçüm yoksa 422 `no_measurement`.
     """
     now = datetime.utcnow()
     points: list[dict] = []
 
     current_aqi = _get_latest_aqi(neighborhood_id)
 
-    # Model eğitilmemişse eğitmeyi dene (yeterli veri varsa eğitir)
+    if not predictor.is_trained:
+        predictor.load_model()
+
     if not predictor.is_trained:
         from app.services.ml.model_trainer import train_model_from_db
+
         try:
             with SessionLocal() as db:
                 train_result = train_model_from_db(db)
                 logger.info("Auto-train result: %s", train_result)
         except Exception as e:
-            logger.warning(f"Failed to auto-train model: {e}")
-
-    if not predictor.is_trained:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "model_not_trained",
-                "message": (
-                    "ML modeli henüz eğitilmedi (yeterli external_air_quality "
-                    "kaydı yok). Önce /admin/ml/train veya cron ile veri biriktirin."
-                ),
-            },
-        )
+            logger.warning("Failed to auto-train model: %s", e)
 
     horizon_steps = list(range(6, min(max(hours, 24), 72) + 6, 6))
-    predictions = predictor.predict(current_aqi=current_aqi, hours_ahead=horizon_steps)
+
+    if predictor.is_trained:
+        try:
+            predictions = predictor.predict(current_aqi=current_aqi, hours_ahead=horizon_steps)
+            source = "ml-model-ensemble"
+            ml_active = True
+        except Exception as e:
+            logger.warning("ML predict failed, using persistence: %s", e)
+            predictions = _persistence_predictions(current_aqi, horizon_steps)
+            source = "persistence-flatline"
+            ml_active = False
+    else:
+        predictions = _persistence_predictions(current_aqi, horizon_steps)
+        source = "persistence-flatline"
+        ml_active = False
 
     for h in horizon_steps:
         forecast_time = now + timedelta(hours=h)
@@ -88,6 +98,7 @@ def predict_air_quality_for_next_hours(neighborhood_id: int, hours: int = 24) ->
         "horizon_hours": hours,
         "current_aqi": round(current_aqi, 1),
         "current_aqi_source": "measured",
-        "source": "ml-model-ensemble",
+        "source": source,
+        "ml_model_active": ml_active,
         "forecast": points,
     }
