@@ -22,10 +22,12 @@ dependencies = [
     # --- Scientific / ML ---
     "numpy==1.26.4",
     "scikit-learn==1.6.1",
+    "scikit-fuzzy",  # MYKI primary fuzzy engine (linear fallback exists, but fuzzy preferred)
     "pandas",
     "joblib",
-    # NOTE: scikit-fuzzy, networkx, xgboost intentionally omitted to keep Vercel
-    # Lambda bundle under 250MB. fuzzy_engine has linear fallback; networkx unused.
+    # NOTE: xgboost & networkx intentionally omitted. Vercel "runtime dependency
+    # installation" handles oversized bundles. xgboost is optional (ensemble
+    # falls back to RF+GB). networkx is unused in app code.
     # --- VLM / Image ---
     "Pillow",
     "openai",
