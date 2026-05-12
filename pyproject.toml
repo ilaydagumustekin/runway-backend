@@ -22,11 +22,10 @@ dependencies = [
     # --- Scientific / ML ---
     "numpy==1.26.4",
     "scikit-learn==1.6.1",
-    "scikit-fuzzy",
     "pandas",
     "joblib",
-    "networkx",
-    # xgboost intentionally optional (size/lambda limits); code falls back to RF+GB.
+    # NOTE: scikit-fuzzy, networkx, xgboost intentionally omitted to keep Vercel
+    # Lambda bundle under 250MB. fuzzy_engine has linear fallback; networkx unused.
     # --- VLM / Image ---
     "Pillow",
     "openai",

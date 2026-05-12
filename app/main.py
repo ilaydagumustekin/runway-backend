@@ -102,6 +102,22 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/health/ml", tags=["Default"])
+def health_ml() -> dict:
+    """ML stack import durumu — Vercel/Lambda paket teşhisi için."""
+    from app.services.ml.air_quality_model import (
+        _IMPORT_ERRORS,
+        _MODEL_AVAILABLE,
+        _XGB_AVAILABLE,
+    )
+
+    return {
+        "ml_available": _MODEL_AVAILABLE,
+        "xgb_available": _XGB_AVAILABLE,
+        "import_errors": _IMPORT_ERRORS or None,
+    }
+
+
 app.include_router(neighborhoods.router)
 app.include_router(neighborhood_details.router)
 app.include_router(environmental_data.router)
