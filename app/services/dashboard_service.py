@@ -20,7 +20,7 @@ from app.schemas.dashboard import (
     DashboardNotificationsResponse,
     DashboardQuickMetricsResponse,
 )
-from app.services.location_service import find_nearest_neighborhood
+from app.services.location_service import find_nearest_neighborhood, reverse_geocode_neighborhood_name
 from app.services.myki_service import calculate_myki_from_environmental_data
 from app.services.statistics_service import get_latest_environmental_record
 from app.services.external.weather_service import fetch_current_weather
@@ -233,10 +233,16 @@ def build_dashboard_home(
         weather_cond = None
         weather_key = None
 
+    display_name = neighborhood.name
+    if latitude is not None and longitude is not None:
+        geocoded = reverse_geocode_neighborhood_name(latitude, longitude)
+        if geocoded:
+            display_name = geocoded
+
     return DashboardHomeResponse(
         location=DashboardLocationResponse(
             neighborhood_id=neighborhood.id,
-            neighborhood_name=neighborhood.name,
+            neighborhood_name=display_name,
             city=neighborhood.city,
             district=neighborhood.district,
             latitude=neighborhood.latitude,
