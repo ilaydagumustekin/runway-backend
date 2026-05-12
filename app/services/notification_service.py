@@ -4,8 +4,11 @@ from app.models.notification import Notification
 
 
 def create_air_quality_alert_if_needed(
-    db: Session, user_id: int | None, neighborhood_id: int | None, aqi: float
+    db: Session, user_id: int | None, neighborhood_id: int | None, aqi: float | None
 ) -> Notification | None:
+    if aqi is None:
+        return None
+
     severity: str | None = None
 
     if aqi >= 200:

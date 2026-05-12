@@ -17,8 +17,8 @@ def fetch_satellite_image(lat: float, lon: float, zoom: int = 16, size: str = "6
     """
     api_key = settings.google_maps_api_key
     if not api_key:
-        logger.warning("GOOGLE_MAPS_API_KEY not set. Using mock image bytes.")
-        return b"mock_image_bytes"
+        logger.error("GOOGLE_MAPS_API_KEY not set; cannot fetch satellite image.")
+        return None
         
     url = "https://maps.googleapis.com/maps/api/staticmap"
     params = {

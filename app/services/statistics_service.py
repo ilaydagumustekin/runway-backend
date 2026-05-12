@@ -151,10 +151,10 @@ def build_neighborhood_chart_data(
     ).all()
 
     labels: list[str] = []
-    aqi_values: list[float] = []
-    noise_values: list[float] = []
-    green_area_values: list[float] = []
-    myki_values: list[float] = []
+    aqi_values: list[float | None] = []
+    noise_values: list[float | None] = []
+    green_area_values: list[float | None] = []
+    myki_values: list[float | None] = []
 
     for record in records:
         myki_score, _ = calculate_myki_from_environmental_data(record)

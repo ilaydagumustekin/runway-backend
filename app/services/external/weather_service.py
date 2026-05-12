@@ -44,7 +44,7 @@ def _wmo_to_condition(wmo_code: int) -> tuple[str, str]:
     return mapping.get(wmo_code, ("Belirsiz", "unknown"))
 
 
-def fetch_current_weather(lat: float = 37.76, lon: float = 30.55) -> dict[str, Any]:
+def fetch_current_weather(lat: float = 37.76, lon: float = 30.55) -> dict[str, Any] | None:
     """
     Open-Meteo API'den anlık hava durumu ve saatlik tahmin çeker.
     Varsayılan koordinatlar: Isparta Merkez.
@@ -120,13 +120,4 @@ def fetch_current_weather(lat: float = 37.76, lon: float = 30.55) -> dict[str, A
 
     except Exception as e:
         logger.error(f"Open-Meteo API hatası: {e}")
-        # Fallback — minimal statik veri
-        return {
-            "temperature": 18,
-            "condition_text": "Veri alınamadı",
-            "condition_key": "unknown",
-            "humidity": 0,
-            "wind_speed": 0,
-            "hourly_forecast": [],
-            "source": "fallback",
-        }
+        return None

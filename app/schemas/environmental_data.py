@@ -5,13 +5,13 @@ from pydantic import BaseModel, Field
 
 class EnvironmentalDataCreate(BaseModel):
     neighborhood_id: int
-    pm25: float = Field(ge=0)
-    pm10: float = Field(ge=0)
-    no2: float = Field(ge=0)
-    o3: float = Field(ge=0)
-    aqi: float = Field(ge=0)
-    green_area_ratio: float = Field(ge=0, le=100)
-    noise_level_dba: float = Field(ge=0)
+    pm25: float | None = Field(default=None, ge=0)
+    pm10: float | None = Field(default=None, ge=0)
+    no2: float | None = Field(default=None, ge=0)
+    o3: float | None = Field(default=None, ge=0)
+    aqi: float | None = Field(default=None, ge=0)
+    green_area_ratio: float | None = Field(default=None, ge=0, le=100)
+    noise_level_dba: float | None = Field(default=None, ge=0)
 
 
 class EnvironmentalDataResponse(EnvironmentalDataCreate):

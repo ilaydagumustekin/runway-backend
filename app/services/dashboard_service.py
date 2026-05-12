@@ -110,9 +110,13 @@ def _environment_status_green(green_area: float) -> tuple[str, str]:
     return "Kötü", "bad"
 
 
-def _build_hourly_weather(lat: float = 37.76, lon: float = 30.55) -> tuple[list[DashboardHourlyWeatherItem], dict]:
-    """Open-Meteo API'den gerçek hava durumu çeker."""
+def _build_hourly_weather(
+    lat: float = 37.76, lon: float = 30.55
+) -> tuple[list[DashboardHourlyWeatherItem], dict | None]:
+    """Open-Meteo API'den gerçek hava durumu çeker. API başarısızsa None döner."""
     weather_data = fetch_current_weather(lat, lon)
+    if not weather_data:
+        return [], None
     hourly_items = [
         DashboardHourlyWeatherItem(
             time=h["time"],
@@ -205,24 +209,29 @@ def build_dashboard_home(
 
     latest_record = get_latest_environmental_record(db, neighborhood.id)
 
-    aqi = latest_record.aqi if latest_record else 42
-    noise = latest_record.noise_level_dba if latest_record else 63
-    green_area = latest_record.green_area_ratio if latest_record else 18
+    aqi: float | None = latest_record.aqi if latest_record else None
+    noise: float | None = latest_record.noise_level_dba if latest_record else None
+    green_area: float | None = latest_record.green_area_ratio if latest_record else None
 
     if latest_record:
         myki_score, _ = calculate_myki_from_environmental_data(latest_record)
     else:
-        myki_score = 50.0
+        myki_score = None
 
-    score_label, score_key = _map_score_category(myki_score)
-    air_status, air_status_key = _environment_status_aqi(aqi)
-    noise_status, noise_status_key = _environment_status_noise(noise)
-    green_status, green_status_key = _environment_status_green(green_area)
+    score_label, score_key = _map_score_category(myki_score) if myki_score is not None else (None, None)
+    air_status, air_status_key = _environment_status_aqi(aqi) if aqi is not None else (None, None)
+    noise_status, noise_status_key = _environment_status_noise(noise) if noise is not None else (None, None)
+    green_status, green_status_key = _environment_status_green(green_area) if green_area is not None else (None, None)
     chart_summary = _get_chart_summary(db, neighborhood.id)
     hourly_weather_items, weather_data = _build_hourly_weather(neighborhood.latitude, neighborhood.longitude)
-    weather_temp = weather_data.get("temperature", 0)
-    weather_cond = weather_data.get("condition_text", "Belirsiz")
-    weather_key = weather_data.get("condition_key", "unknown")
+    if weather_data:
+        weather_temp = weather_data.get("temperature")
+        weather_cond = weather_data.get("condition_text")
+        weather_key = weather_data.get("condition_key")
+    else:
+        weather_temp = None
+        weather_cond = None
+        weather_key = None
 
     return DashboardHomeResponse(
         location=DashboardLocationResponse(
@@ -234,24 +243,28 @@ def build_dashboard_home(
             longitude=neighborhood.longitude,
         ),
         environment_score=DashboardEnvironmentScoreResponse(
-            score=round(myki_score, 2),
+            score=round(myki_score, 2) if myki_score is not None else None,
             category=score_label,
             category_key=score_key,
             last_updated_text=_relative_updated_text(latest_record.created_at if latest_record else None),
             updated_at=latest_record.created_at if latest_record else None,
         ),
         quick_metrics=DashboardQuickMetricsResponse(
-            air_quality=DashboardMetricValueResponse(label="Hava", value=round(aqi), unit="AQI"),
-            noise=DashboardMetricValueResponse(label="Gürültü", value=round(noise), unit="dB"),
+            air_quality=DashboardMetricValueResponse(
+                label="Hava", value=round(aqi) if aqi is not None else None, unit="AQI"
+            ),
+            noise=DashboardMetricValueResponse(
+                label="Gürültü", value=round(noise) if noise is not None else None, unit="dB"
+            ),
             green_area=DashboardMetricValueResponse(
-                label="Yeşil", value=round(green_area), unit="%"
+                label="Yeşil", value=round(green_area) if green_area is not None else None, unit="%"
             ),
         ),
         current_environment=[
             DashboardCurrentEnvironmentItem(
                 key="air_quality",
                 title="Hava Kalitesi",
-                value=round(aqi),
+                value=round(aqi) if aqi is not None else None,
                 unit="AQI",
                 status=air_status,
                 status_key=air_status_key,
@@ -259,7 +272,7 @@ def build_dashboard_home(
             DashboardCurrentEnvironmentItem(
                 key="noise",
                 title="Gürültü",
-                value=round(noise),
+                value=round(noise) if noise is not None else None,
                 unit="dB",
                 status=noise_status,
                 status_key=noise_status_key,
@@ -267,7 +280,7 @@ def build_dashboard_home(
             DashboardCurrentEnvironmentItem(
                 key="green_area",
                 title="Yeşil Alan",
-                value=round(green_area),
+                value=round(green_area) if green_area is not None else None,
                 unit="%",
                 status=green_status,
                 status_key=green_status_key,

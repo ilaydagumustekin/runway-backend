@@ -22,14 +22,18 @@ def analyze_green_area(image_bytes: bytes) -> dict[str, Any]:
     Returns a dict with 'green_percentage' and 'confidence'.
     """
     api_key = settings.gemini_api_key
-    
-    # Fallback to mock if no API key or image is our mock
-    if not api_key or image_bytes == b"mock_image_bytes":
-        logger.warning("Using mock VLM analysis.")
+
+    if not api_key:
+        logger.error("GEMINI_API_KEY not set; cannot run VLM analysis.")
         return {
-            "green_percentage": 35.5,
-            "confidence": 0.85,
-            "detected_areas": ["parks", "street trees"]
+            "error": "missing_api_key",
+            "message": "GEMINI_API_KEY environment variable is not configured.",
+        }
+
+    if not image_bytes:
+        return {
+            "error": "missing_image",
+            "message": "No image bytes were provided for analysis.",
         }
         
     base64_image = encode_image(image_bytes)

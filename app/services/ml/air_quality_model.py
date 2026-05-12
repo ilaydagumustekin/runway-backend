@@ -161,9 +161,14 @@ class AirQualityPredictor:
 
     def predict(self, current_aqi: float, hours_ahead: list[int]) -> dict[int, float]:
         """Verilen saat ufukları için AQI tahminleri döndürür."""
-        if not _MODEL_AVAILABLE or not self.is_trained:
-            # Fallback basit tahmin
-            return {h: current_aqi + h * 0.1 for h in hours_ahead}
+        if not _MODEL_AVAILABLE:
+            raise RuntimeError(
+                "ML libraries are not installed; cannot predict air quality."
+            )
+        if not self.is_trained:
+            raise RuntimeError(
+                "Model is not trained yet; train it before requesting predictions."
+            )
             
         now = datetime.utcnow()
         predictions = {}

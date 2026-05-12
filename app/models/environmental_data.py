@@ -13,11 +13,11 @@ class EnvironmentalData(Base):
     neighborhood_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("neighborhoods.id"), index=True, nullable=False
     )
-    pm25: Mapped[float] = mapped_column(Float, nullable=False)
-    pm10: Mapped[float] = mapped_column(Float, nullable=False)
-    no2: Mapped[float] = mapped_column(Float, nullable=False)
-    o3: Mapped[float] = mapped_column(Float, nullable=False)
-    aqi: Mapped[float] = mapped_column(Float, nullable=False)
-    green_area_ratio: Mapped[float] = mapped_column(Float, nullable=False)
-    noise_level_dba: Mapped[float] = mapped_column(Float, nullable=False)
+    pm25: Mapped[float | None] = mapped_column(Float, nullable=True)
+    pm10: Mapped[float | None] = mapped_column(Float, nullable=True)
+    no2: Mapped[float | None] = mapped_column(Float, nullable=True)
+    o3: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aqi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    green_area_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    noise_level_dba: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

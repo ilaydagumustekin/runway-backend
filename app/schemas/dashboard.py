@@ -13,16 +13,16 @@ class DashboardLocationResponse(BaseModel):
 
 
 class DashboardEnvironmentScoreResponse(BaseModel):
-    score: float
-    category: str
-    category_key: str
+    score: float | None
+    category: str | None
+    category_key: str | None
     last_updated_text: str
     updated_at: datetime | None
 
 
 class DashboardMetricValueResponse(BaseModel):
     label: str
-    value: float | int
+    value: float | int | None
     unit: str
 
 
@@ -35,10 +35,10 @@ class DashboardQuickMetricsResponse(BaseModel):
 class DashboardCurrentEnvironmentItem(BaseModel):
     key: str
     title: str
-    value: float | int
+    value: float | int | None
     unit: str
-    status: str
-    status_key: str
+    status: str | None
+    status_key: str | None
 
 
 class DashboardHourlyWeatherItem(BaseModel):

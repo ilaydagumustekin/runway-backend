@@ -29,20 +29,26 @@ def get_environmental_cost(db: Session, neighborhood: Neighborhood) -> float:
     """
     Mahallenin çevresel maliyetini hesaplar.
     Düşük MYKI skoru yüksek maliyet demektir.
+
+    Olcum/MYKI hesaplanamiyorsa noter olarak 50 doner (rotalama tamamen
+    durmasin diye); bu sabit bir "mock" degil, eksik veri icin notr maliyet.
     """
     stmt = select(EnvironmentalData).where(
         EnvironmentalData.neighborhood_id == neighborhood.id
     ).order_by(EnvironmentalData.created_at.desc()).limit(1)
-    
+
     env_data = db.scalars(stmt).first()
-    
+
     if not env_data:
-        return 50.0 # Default/Neutral cost
-        
+        return 50.0  # Veri yok -> notr maliyet
+
     score, _ = calculate_myki_from_environmental_data(env_data)
-    # Skor 0-100 arasi, maliyet ise ters orantili: 100 - skor. 
+    if score is None:
+        return 50.0  # MYKI hesaplanamadi -> notr maliyet
+
+    # Skor 0-100 arasi, maliyet ise ters orantili: 100 - skor.
     # Yüksek skor -> düşük maliyet.
-    return 100.0 - score
+    return 100.0 - float(score)
 
 def find_best_route(db: Session, start_lat: float, start_lon: float, end_lat: float, end_lon: float, optimize_for: str = "environment"):
     """

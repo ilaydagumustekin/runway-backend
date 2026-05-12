@@ -1,3 +1,8 @@
+"""
+Sadece referans mahalleleri (ad/şehir/ilçe/koordinat) seed eder.
+Çevresel veri ve TÜİK referans değerleri seed edilmez; bunlar
+API entegrasyonları (OpenAQ, Gemini, TÜİK CSV) ile beslenir.
+"""
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -6,60 +11,23 @@ from app.models.neighborhood import Neighborhood
 
 def seed_neighborhoods_if_enabled(db: Session) -> None:
     seed_data = [
-        {
-            "name": "Çünür",
-            "city": "Isparta",
-            "district": "Merkez",
-            "latitude": 37.7952,
-            "longitude": 30.5485,
-            "boundary_data": None,
-        },
-        {
-            "name": "Bahçelievler",
-            "city": "Isparta",
-            "district": "Merkez",
-            "latitude": 37.7678,
-            "longitude": 30.5566,
-            "boundary_data": None,
-        },
-        {
-            "name": "Davraz",
-            "city": "Isparta",
-            "district": "Merkez",
-            "latitude": 37.7845,
-            "longitude": 30.5745,
-            "boundary_data": None,
-        },
-        {
-            "name": "Fatih",
-            "city": "Isparta",
-            "district": "Merkez",
-            "latitude": 37.7725,
-            "longitude": 30.5438,
-            "boundary_data": None,
-        },
-        {
-            "name": "Modernevler",
-            "city": "Isparta",
-            "district": "Merkez",
-            "latitude": 37.7665,
-            "longitude": 30.5508,
-            "boundary_data": None,
-        },
-        {
-            "name": "Anadolu",
-            "city": "Isparta",
-            "district": "Merkez",
-            "latitude": 37.7834,
-            "longitude": 30.5532,
-            "boundary_data": None,
-        },
+        {"name": "Çünür", "city": "Isparta", "district": "Merkez",
+         "latitude": 37.7952, "longitude": 30.5485, "boundary_data": None},
+        {"name": "Bahçelievler", "city": "Isparta", "district": "Merkez",
+         "latitude": 37.7678, "longitude": 30.5566, "boundary_data": None},
+        {"name": "Davraz", "city": "Isparta", "district": "Merkez",
+         "latitude": 37.7845, "longitude": 30.5745, "boundary_data": None},
+        {"name": "Fatih", "city": "Isparta", "district": "Merkez",
+         "latitude": 37.7725, "longitude": 30.5438, "boundary_data": None},
+        {"name": "Modernevler", "city": "Isparta", "district": "Merkez",
+         "latitude": 37.7665, "longitude": 30.5508, "boundary_data": None},
+        {"name": "Anadolu", "city": "Isparta", "district": "Merkez",
+         "latitude": 37.7834, "longitude": 30.5532, "boundary_data": None},
     ]
 
     existing_rows = db.scalars(select(Neighborhood)).all()
     existing_by_key = {
-        (row.city, row.district, row.name): row
-        for row in existing_rows
+        (row.city, row.district, row.name): row for row in existing_rows
     }
 
     to_insert: list[Neighborhood] = []

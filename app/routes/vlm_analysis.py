@@ -33,13 +33,13 @@ def persist_green_area_ratio(db: Session, neighborhood_id: int, green_percentage
     else:
         record = EnvironmentalData(
             neighborhood_id=neighborhood_id,
-            pm25=0.0,
-            pm10=0.0,
-            no2=0.0,
-            o3=0.0,
-            aqi=50.0,
+            pm25=None,
+            pm10=None,
+            no2=None,
+            o3=None,
+            aqi=None,
             green_area_ratio=green_percentage,
-            noise_level_dba=55.0,
+            noise_level_dba=None,
         )
         db.add(record)
 

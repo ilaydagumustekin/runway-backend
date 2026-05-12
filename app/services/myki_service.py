@@ -77,16 +77,20 @@ def _category_from_score(score: float) -> str:
 
 def calculate_myki_from_environmental_data(
     record: EnvironmentalData,
-) -> tuple[float, str]:
+) -> tuple[float | None, str | None]:
     """
     EnvironmentalData kaydından MYKI skoru ve kategorisi hesaplar.
 
     Bulanık mantık sistemi kullanılabilir durumdaysa Mamdani çıkarımı,
     aksi halde basit ağırlıklı ortalama ile hesaplanır.
+    Gerekli alanlardan biri None ise (None, None) döner.
     """
     aqi = record.aqi
     green_area = record.green_area_ratio
     noise = record.noise_level_dba
+
+    if aqi is None or green_area is None or noise is None:
+        return None, None
 
     if _FUZZY_AVAILABLE:
         try:
