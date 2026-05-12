@@ -41,15 +41,17 @@ except ImportError as e:
     XGBRegressor = None  # type: ignore[assignment]
     _IMPORT_ERRORS.append(f"xgboost (optional): {e}")
 
-if _IMPORT_ERRORS:
-    logger.warning("ML import issues: %s", "; ".join(_IMPORT_ERRORS))
 if not _MODEL_AVAILABLE:
+    # Only raise WARNING when CORE libs missing — these break the model.
+    core_errors = [e for e in _IMPORT_ERRORS if not e.startswith("xgboost")]
     logger.warning(
-        "Core ML libs (sklearn/joblib/pandas) eksik; ML modeli devre dışı. "
-        "pip install scikit-learn==1.6.1 joblib pandas"
+        "Core ML libs eksik (model devre dışı): %s. "
+        "pip install scikit-learn==1.6.1 joblib pandas",
+        "; ".join(core_errors),
     )
 elif not _XGB_AVAILABLE:
-    logger.info("xgboost yok; RF+GB ensemble kullanılacak.")
+    # xgboost is intentionally optional — info-level, not warning.
+    logger.info("xgboost yok; RF+GB ensemble ile devam ediliyor (normal davranış).")
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
 
