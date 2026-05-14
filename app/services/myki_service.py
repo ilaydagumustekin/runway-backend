@@ -10,7 +10,11 @@ from __future__ import annotations
 
 import logging
 
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session
+
 from app.models.environmental_data import EnvironmentalData
+from app.schemas.myki import MYKIResponse
 
 logger = logging.getLogger(__name__)
 
@@ -77,20 +81,17 @@ def _category_from_score(score: float) -> str:
 
 def calculate_myki_from_environmental_data(
     record: EnvironmentalData,
-) -> tuple[float | None, str | None]:
+) -> tuple[float, str]:
     """
     EnvironmentalData kaydından MYKI skoru ve kategorisi hesaplar.
 
     Bulanık mantık sistemi kullanılabilir durumdaysa Mamdani çıkarımı,
     aksi halde basit ağırlıklı ortalama ile hesaplanır.
-    Gerekli alanlardan biri None ise (None, None) döner.
+    Eksik (None) girdiler 0 olarak alınır ve skor yine de hesaplanır.
     """
-    aqi = record.aqi
-    green_area = record.green_area_ratio
-    noise = record.noise_level_dba
-
-    if aqi is None or green_area is None or noise is None:
-        return None, None
+    aqi = float(record.aqi) if record.aqi is not None else 0.0
+    green_area = float(record.green_area_ratio) if record.green_area_ratio is not None else 0.0
+    noise = float(record.noise_level_dba) if record.noise_level_dba is not None else 0.0
 
     if _FUZZY_AVAILABLE:
         try:
@@ -106,3 +107,19 @@ def calculate_myki_from_environmental_data(
     score = _calculate_weighted_myki(aqi, green_area, noise)
     category = _category_from_score(score)
     return score, category
+
+
+def get_myki_for_neighborhood(db: Session, neighborhood_id: int) -> MYKIResponse | None:
+    """
+    Son çevresel veri kaydına göre MYKI döndürür.
+    GET /myki/{neighborhood_id} ve dashboard `environment_score` aynı kaynağı kullanır.
+    """
+    latest_record = db.scalar(
+        select(EnvironmentalData)
+        .where(EnvironmentalData.neighborhood_id == neighborhood_id)
+        .order_by(desc(EnvironmentalData.created_at))
+    )
+    if not latest_record:
+        return None
+    score, category = calculate_myki_from_environmental_data(latest_record)
+    return MYKIResponse(neighborhood_id=neighborhood_id, score=score, category=category)

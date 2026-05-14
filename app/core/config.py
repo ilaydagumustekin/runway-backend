@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     # generateContent model id, e.g. gemini-2.0-flash, gemini-1.5-flash (avoid -latest aliases on server keys)
     gemini_model: str = "gemini-2.0-flash"
+    # Vercel AI Gateway (OpenAI-compatible): https://vercel.com/docs/ai-gateway
+    ai_gateway_api_key: str = ""
+    ai_gateway_base_url: str = "https://ai-gateway.vercel.sh/v1"
+    green_area_gateway_model: str = "openai/gpt-4o-mini"
+    # Robustness knobs for green area VLM (deterministic + multi-sample median)
+    green_area_samples: int = 3
+    green_area_temperature: float = 0.0
+    green_area_seed: int = 42
     openaq_api_key: str = ""
     openrouteservice_api_key: str = ""
 
@@ -56,6 +64,7 @@ class Settings(BaseSettings):
             ("google_maps_api_key", ("GOOGLE_MAPS_API_KEY",)),
             ("gemini_api_key", ("GEMINI_API_KEY", "GOOGLE_GENERATIVE_AI_API_KEY")),
             ("openai_api_key", ("OPENAI_API_KEY",)),
+            ("ai_gateway_api_key", ("AI_GATEWAY_API_KEY",)),
             ("secret_key", ("SECRET_KEY",)),
         )
         for field, env_names in backfill:

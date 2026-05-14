@@ -6,73 +6,116 @@ from sqlalchemy import desc, select
 
 from app.database import SessionLocal
 from app.models.environmental_data import EnvironmentalData
+from app.models.neighborhood import Neighborhood
 from app.services.ml.air_quality_model import predictor
 
 logger = logging.getLogger(__name__)
 
 
-def _get_latest_aqi(neighborhood_id: int) -> float:
-    """En son `environmental_data` ölçümünden AQI değerini döner.
+def _persistence_predictions(current_aqi: float, horizon_hours: list[int]) -> dict[int, float]:
+    """ML yokken son ölçümü ufuk boyunca sabit varsayar."""
+    return {h: float(current_aqi) for h in horizon_hours}
 
-    Ölçüm yoksa `HTTPException(422)` fırlatır; mock değer döndürmez.
+
+def _query_latest_aqi(db, neighborhood_id: int) -> float | None:
+    latest = db.scalars(
+        select(EnvironmentalData)
+        .where(EnvironmentalData.neighborhood_id == neighborhood_id)
+        .order_by(desc(EnvironmentalData.created_at))
+        .limit(1)
+    ).first()
+    if latest is None or latest.aqi is None:
+        return None
+    return float(latest.aqi)
+
+
+def _get_latest_aqi(neighborhood_id: int) -> float:
+    """En son ölçümden AQI döner; yoksa OpenAQ'dan otomatik fetch dener.
+
+    Sırasıyla: (1) DB'de mevcut son AQI, (2) OpenAQ canlı çekim, (3) 422.
     """
     with SessionLocal() as db:
-        latest = db.scalars(
-            select(EnvironmentalData)
-            .where(EnvironmentalData.neighborhood_id == neighborhood_id)
-            .order_by(desc(EnvironmentalData.created_at))
-            .limit(1)
-        ).first()
-        if latest is None or latest.aqi is None:
+        latest = _query_latest_aqi(db, neighborhood_id)
+        if latest is not None:
+            return latest
+
+        neighborhood = db.get(Neighborhood, neighborhood_id)
+        if neighborhood is None:
             raise HTTPException(
-                status_code=422,
-                detail={
-                    "code": "no_measurement",
-                    "message": (
-                        "Bu mahalle için ölçüm bulunmuyor. Önce "
-                        "/integrations/air-quality-fetch/{id} endpoint'ini çağırın."
-                    ),
-                    "neighborhood_id": neighborhood_id,
-                },
+                status_code=404,
+                detail={"code": "neighborhood_not_found", "neighborhood_id": neighborhood_id},
             )
-        return float(latest.aqi)
+
+        # DB'de ölçüm yok → OpenAQ'dan canlı çek ve persiste et, sonra tekrar dene.
+        try:
+            from app.services.air_quality_fetch_service import fetch_and_persist_air_quality
+
+            fetch_result = fetch_and_persist_air_quality(neighborhood, db=db)
+            logger.info(
+                "Auto-fetch AQI for neighborhood %s: %s", neighborhood_id, fetch_result
+            )
+        except Exception as e:  # pragma: no cover - network/3rd-party
+            logger.warning(
+                "Auto-fetch AQI failed for neighborhood %s: %s", neighborhood_id, e
+            )
+
+        latest = _query_latest_aqi(db, neighborhood_id)
+        if latest is not None:
+            return latest
+
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "no_measurement",
+                "message": (
+                    "Bu mahalle için ölçüm bulunmuyor ve OpenAQ otomatik çekim başarısız. "
+                    "Manuel olarak /integrations/air-quality-fetch/{id} deneyin."
+                ),
+                "neighborhood_id": neighborhood_id,
+            },
+        )
 
 
 def predict_air_quality_for_next_hours(neighborhood_id: int, hours: int = 24) -> dict:
     """
     Belirli bir mahalle için hava kalitesi tahminlerini döndürür.
-    Eğitilmiş ML modelini (Random Forest / Gradient Boosting / XGBoost ensemble) kullanır.
-    Başlangıç değeri DB'deki son ölçümdür; ölçüm yoksa 422 döner.
+    Eğitilmiş ensemble varsa onu kullanır; yoksa veya tahmin hata verirse son AQI ile
+    düz çizgi (persistence) döner. Ölçüm yoksa 422 `no_measurement`.
     """
     now = datetime.utcnow()
     points: list[dict] = []
 
     current_aqi = _get_latest_aqi(neighborhood_id)
 
-    # Model eğitilmemişse eğitmeyi dene (yeterli veri varsa eğitir)
+    if not predictor.is_trained:
+        predictor.load_model()
+
     if not predictor.is_trained:
         from app.services.ml.model_trainer import train_model_from_db
+
         try:
             with SessionLocal() as db:
                 train_result = train_model_from_db(db)
                 logger.info("Auto-train result: %s", train_result)
         except Exception as e:
-            logger.warning(f"Failed to auto-train model: {e}")
-
-    if not predictor.is_trained:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "code": "model_not_trained",
-                "message": (
-                    "ML modeli henüz eğitilmedi (yeterli external_air_quality "
-                    "kaydı yok). Önce /admin/ml/train veya cron ile veri biriktirin."
-                ),
-            },
-        )
+            logger.warning("Failed to auto-train model: %s", e)
 
     horizon_steps = list(range(6, min(max(hours, 24), 72) + 6, 6))
-    predictions = predictor.predict(current_aqi=current_aqi, hours_ahead=horizon_steps)
+
+    if predictor.is_trained:
+        try:
+            predictions = predictor.predict(current_aqi=current_aqi, hours_ahead=horizon_steps)
+            source = "ml-model-ensemble"
+            ml_active = True
+        except Exception as e:
+            logger.warning("ML predict failed, using persistence: %s", e)
+            predictions = _persistence_predictions(current_aqi, horizon_steps)
+            source = "persistence-flatline"
+            ml_active = False
+    else:
+        predictions = _persistence_predictions(current_aqi, horizon_steps)
+        source = "persistence-flatline"
+        ml_active = False
 
     for h in horizon_steps:
         forecast_time = now + timedelta(hours=h)
@@ -88,6 +131,7 @@ def predict_air_quality_for_next_hours(neighborhood_id: int, hours: int = 24) ->
         "horizon_hours": hours,
         "current_aqi": round(current_aqi, 1),
         "current_aqi_source": "measured",
-        "source": "ml-model-ensemble",
+        "source": source,
+        "ml_model_active": ml_active,
         "forecast": points,
     }

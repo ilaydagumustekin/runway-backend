@@ -8,13 +8,13 @@ from app.schemas.neighborhood import NeighborhoodResponse
 
 class NeighborhoodDetailEnvironmentalData(BaseModel):
     id: int
-    aqi: float
-    pm25: float
-    pm10: float
-    no2: float
-    o3: float
-    green_area_ratio: float
-    noise_level_dba: float
+    aqi: float | None
+    pm25: float | None
+    pm10: float | None
+    no2: float | None
+    o3: float | None
+    green_area_ratio: float | None
+    noise_level_dba: float | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -27,10 +27,10 @@ class NeighborhoodDetailMYKI(BaseModel):
 
 class NeighborhoodDetailChartSummary(BaseModel):
     labels: list[str]
-    aqi: list[float]
-    noise_level_dba: list[float]
-    green_area_ratio: list[float]
-    myki_score: list[float]
+    aqi: list[float | None]
+    noise_level_dba: list[float | None]
+    green_area_ratio: list[float | None]
+    myki_score: list[float | None]
 
 
 class NeighborhoodDetailDataSource(BaseModel):

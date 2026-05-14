@@ -19,8 +19,18 @@ dependencies = [
     "passlib[bcrypt]",
     "bcrypt<4.0",
     "python-multipart",
+    # --- Scientific / ML ---
     "numpy==1.26.4",
+    "scikit-learn==1.6.1",
+    "scikit-fuzzy",  # MYKI primary fuzzy engine (linear fallback exists, but fuzzy preferred)
+    "pandas",
+    "joblib",
+    # NOTE: xgboost & networkx intentionally omitted. Vercel "runtime dependency
+    # installation" handles oversized bundles. xgboost is optional (ensemble
+    # falls back to RF+GB). networkx is unused in app code.
+    # --- VLM / Image ---
     "Pillow",
+    "openai",
 ]
 
 [tool.vercel]
