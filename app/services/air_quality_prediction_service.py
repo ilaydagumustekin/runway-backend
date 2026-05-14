@@ -6,6 +6,7 @@ from sqlalchemy import desc, select
 
 from app.database import SessionLocal
 from app.models.environmental_data import EnvironmentalData
+from app.models.neighborhood import Neighborhood
 from app.services.ml.air_quality_model import predictor
 
 logger = logging.getLogger(__name__)
@@ -16,31 +17,63 @@ def _persistence_predictions(current_aqi: float, horizon_hours: list[int]) -> di
     return {h: float(current_aqi) for h in horizon_hours}
 
 
-def _get_latest_aqi(neighborhood_id: int) -> float:
-    """En son `environmental_data` ölçümünden AQI değerini döner.
+def _query_latest_aqi(db, neighborhood_id: int) -> float | None:
+    latest = db.scalars(
+        select(EnvironmentalData)
+        .where(EnvironmentalData.neighborhood_id == neighborhood_id)
+        .order_by(desc(EnvironmentalData.created_at))
+        .limit(1)
+    ).first()
+    if latest is None or latest.aqi is None:
+        return None
+    return float(latest.aqi)
 
-    Ölçüm yoksa `HTTPException(422)` fırlatır; mock değer döndürmez.
+
+def _get_latest_aqi(neighborhood_id: int) -> float:
+    """En son ölçümden AQI döner; yoksa OpenAQ'dan otomatik fetch dener.
+
+    Sırasıyla: (1) DB'de mevcut son AQI, (2) OpenAQ canlı çekim, (3) 422.
     """
     with SessionLocal() as db:
-        latest = db.scalars(
-            select(EnvironmentalData)
-            .where(EnvironmentalData.neighborhood_id == neighborhood_id)
-            .order_by(desc(EnvironmentalData.created_at))
-            .limit(1)
-        ).first()
-        if latest is None or latest.aqi is None:
+        latest = _query_latest_aqi(db, neighborhood_id)
+        if latest is not None:
+            return latest
+
+        neighborhood = db.get(Neighborhood, neighborhood_id)
+        if neighborhood is None:
             raise HTTPException(
-                status_code=422,
-                detail={
-                    "code": "no_measurement",
-                    "message": (
-                        "Bu mahalle için ölçüm bulunmuyor. Önce "
-                        "/integrations/air-quality-fetch/{id} endpoint'ini çağırın."
-                    ),
-                    "neighborhood_id": neighborhood_id,
-                },
+                status_code=404,
+                detail={"code": "neighborhood_not_found", "neighborhood_id": neighborhood_id},
             )
-        return float(latest.aqi)
+
+        # DB'de ölçüm yok → OpenAQ'dan canlı çek ve persiste et, sonra tekrar dene.
+        try:
+            from app.services.air_quality_fetch_service import fetch_and_persist_air_quality
+
+            fetch_result = fetch_and_persist_air_quality(neighborhood, db=db)
+            logger.info(
+                "Auto-fetch AQI for neighborhood %s: %s", neighborhood_id, fetch_result
+            )
+        except Exception as e:  # pragma: no cover - network/3rd-party
+            logger.warning(
+                "Auto-fetch AQI failed for neighborhood %s: %s", neighborhood_id, e
+            )
+
+        latest = _query_latest_aqi(db, neighborhood_id)
+        if latest is not None:
+            return latest
+
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "no_measurement",
+                "message": (
+                    "Bu mahalle için ölçüm bulunmuyor ve OpenAQ otomatik çekim başarısız. "
+                    "Manuel olarak /integrations/air-quality-fetch/{id} deneyin."
+                ),
+                "neighborhood_id": neighborhood_id,
+            },
+        )
 
 
 def predict_air_quality_for_next_hours(neighborhood_id: int, hours: int = 24) -> dict:
