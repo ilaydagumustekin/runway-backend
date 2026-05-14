@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     seed_demo_data: bool = True
     secret_key: str = "change-me"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 43200  # 30 gün
     algorithm: str = "HS256"
     openai_api_key: str = ""
     google_maps_api_key: str = ""
@@ -32,8 +32,20 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _deployment_overrides(self) -> Self:
         """Vercel: writable SQLite path; OS env backfill for keys (Vercel injects process env)."""
-        if os.environ.get("VERCEL"):
-            url = self.database_url
+        # DATABASE_URL ortam değişkeni varsa önce onu oku (Vercel env vars → Supabase/Neon)
+        db_from_env = os.environ.get("DATABASE_URL", "").strip()
+        if db_from_env:
+            object.__setattr__(self, "database_url", db_from_env)
+
+        url = self.database_url
+
+        # postgresql:// → postgresql+psycopg:// (psycopg3 driver)
+        if url.startswith("postgresql://") or url.startswith("postgres://"):
+            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+            url = url.replace("postgres://", "postgresql+psycopg://", 1)
+            object.__setattr__(self, "database_url", url)
+        elif os.environ.get("VERCEL"):
+            # PostgreSQL URL yoksa Vercel'de /tmp'ye yaz (geçici, cold-start'ta sıfırlanır)
             if url.startswith("sqlite:///./") or url == "sqlite:///./runway.db":
                 object.__setattr__(self, "database_url", "sqlite:////tmp/runway.db")
 
