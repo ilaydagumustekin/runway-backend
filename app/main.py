@@ -102,19 +102,6 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/health/db", tags=["Default"])
-def health_db() -> dict:
-    import os
-    db_url = settings.database_url
-    db_env = os.environ.get("DATABASE_URL", "")
-    db_type = "postgresql" if "postgresql" in db_url or "postgres" in db_url else "sqlite"
-    return {
-        "db_type": db_type,
-        "db_url_prefix": db_url[:30] + "..." if len(db_url) > 30 else db_url,
-        "env_var_set": bool(db_env),
-        "env_var_prefix": db_env[:20] + "..." if len(db_env) > 20 else "(not set)",
-    }
-
 
 @app.get("/health/ml", tags=["Default"])
 def health_ml() -> dict:
